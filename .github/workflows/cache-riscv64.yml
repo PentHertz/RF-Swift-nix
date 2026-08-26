@@ -1,0 +1,82 @@
+name: Cache riscv64
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cache-riscv64-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.catalog.outputs.envs }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: catalog
+        run: echo "envs=$(jq -c '[.environments[].name]' catalog.json)" >> "$GITHUB_OUTPUT"
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        env: ${{ fromJSON(needs.prepare.outputs.envs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Register RISC-V user-mode emulation
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: riscv64
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            extra-platforms = riscv64-linux
+            max-jobs = 1
+            cores = 0
+      - name: Configure public cache (read only)
+        if: github.event_name != 'push'
+        uses: cachix/cachix-action@v15
+        with:
+          name: ${{ vars.CACHIX_CACHE || 'rfswift' }}
+      - name: Configure cache publication
+        if: github.event_name == 'push'
+        uses: cachix/cachix-action@v15
+        with:
+          name: ${{ vars.CACHIX_CACHE || 'rfswift' }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Confirm RISC-V execution support
+        run: grep -q riscv64 /proc/sys/fs/binfmt_misc/qemu-riscv64
+      - id: closure
+        continue-on-error: true
+        run: .github/scripts/build-cache-report.sh riscv64-linux "${{ matrix.env }}" "reports/${{ matrix.env }}"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nix-cache-riscv64-${{ matrix.env }}
+          path: reports/${{ matrix.env }}
+      - if: steps.closure.outcome != 'success'
+        run: exit 1
+  report:
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nix-cache-riscv64-*
+          path: reports
+      - run: .github/scripts/aggregate-cache-reports.sh reports cache-riscv64-report.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nix-cache-riscv64-report
+          path: cache-riscv64-report.md

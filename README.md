@@ -1,0 +1,110 @@
+# RF-Swift-nix
+
+Current development version: **v1.0.0-dev**, built from `main`.
+
+Reproducible RF, hardware and security tool environments for [RF Swift](https://github.com/PentHertz/RF-Swift), powered by the Nix package manager.
+
+This repository is to the `nix` engine what [RF-Swift-images](https://github.com/PentHertz/RF-Swift-images) is to the Docker engine: it holds the definitions of every environment ("image") and the packaging for the tools that go in them. The RF Swift binary reads `catalog.json` from here (or a pinned release of it) to know what environments exist, and evaluates this flake to build them.
+
+## Why a Nix engine
+
+Docker gives you an isolated image. Nix gives you a reproducible set of tools installed straight onto the host, with no daemon and no container. `rfswift run --engine nix -i sdr_light -n mysdr` builds the exact same closure everywhere, pins it so it survives garbage collection, and drops you into a shell with the tools on `PATH`. USB and audio just work because there is no container boundary to cross.
+
+## Layout
+
+```
+environments.nix     the catalog as pure data: image -> package list (single source of truth)
+gen-catalog.nix      turns environments.nix into catalog.json
+catalog.json         machine-readable index the RF Swift binary reads (generated)
+flake.nix            builds devShells / profiles from environments.nix + pkgs/
+pkgs/                RF Swift's own derivations (source builds, forks, vendor blobs)
+```
+
+The current implementation status, evidence levels, known gaps, and RF Swift
+binary improvement backlog are maintained in
+[`docs/verification-audit.md`](docs/verification-audit.md).
+
+GitHub Actions, Cachix publishing, branch protection, and release hand-off are
+documented in [`docs/ci-cd.md`](docs/ci-cd.md).
+
+Cache population is split into independent amd64, native arm64, and
+QEMU-backed riscv64 workflows. Each uploads raw logs plus JSON/Markdown problem
+reports, and one architecture failing cannot stop either of the others.
+
+## Use it directly with Nix
+
+```bash
+# List what the flake exposes
+nix flake show
+
+# Enter an environment as a dev shell
+nix develop github:PentHertz/RF-Swift-nix#sdr_light
+
+# Or install its whole tool closure into a profile
+nix profile install github:PentHertz/RF-Swift-nix#rfid
+
+# Build a single RF Swift tool
+nix build github:PentHertz/RF-Swift-nix#pkg-readsb
+```
+
+Or, the RF Swift way:
+
+```bash
+rfswift run --engine nix -i sdr_light -n mysdr        # build the whole set once
+rfswift run --engine nix -i sdr_light -n mysdr --lazy # or build each tool on first call
+rfswift nix run sdr_light gqrx                        # or just run one tool on demand
+rfswift nix catalog                                   # browse environments
+rfswift nix list                                      # your created environments
+```
+
+In a lazy SDR environment, run `gnuradio-companion`. Its first invocation
+realizes the `gnuradio-rfswift` closure, which already contains all RF Swift OOT
+modules; they are not fetched separately from inside GRC. The initial launch can
+therefore be substantial, while later launches reuse the same Nix store closure.
+
+## Eager vs on-demand, and the binary cache
+
+Creating an environment eagerly builds its whole tool closure once; `--lazy` builds each tool the first time it is called. Either way, "build" is mostly "download a prebuilt binary from a cache", not "compile". Standard nixpkgs tools come prebuilt from `cache.nixos.org`; only tools not in a cache compile locally, which here is the handful of derivations in `pkgs/`. The architecture-specific cache workflows build the environments and push them to a binary cache, so once configured, even those download prebuilt (see [`docs/ci-cd.md`](docs/ci-cd.md)).
+
+## Environments
+
+Run `rfswift nix catalog` or `nix eval .#catalog` for the live list. At a glance:
+
+| Environment | What it gives you |
+|-------------|-------------------|
+| `sdr_light` | GNU Radio, GQRX, SDR++, URH, inspectrum, rtl_433, dump1090/readsb, plus the full SDR driver layer |
+| `sdr_full`  | `sdr_light` plus SDRangel, SatDump, SigDigger, GNU Radio OOT modules and an ML stack |
+| `rfid`      | Proxmark3, libnfc, MIFARE crackers, NFC utilities |
+| `wifi`      | aircrack-ng, hcxtools, WPS/WPA3 attacks, on the network toolkit |
+| `bluetooth` | BlueZ, Ubertooth, Python BLE tooling |
+| `network`   | nmap, Wireshark, Metasploit, bettercap, Kismet, hashcat/john, sqlmap |
+| `reversing` | Ghidra, rizin/Cutter, radare2, binwalk, angr, AFL++, semgrep, ImHex |
+| `hardware`  | avrdude, sigrok/PulseView, OpenOCD, flashrom, openFPGALoader, esptool |
+| `automotive`| can-utils, SavvyCAN, python-can |
+| `osint`     | theHarvester, sherlock, recon-ng, subfinder, exiftool |
+| `android`   | adb/fastboot, apktool, frida, androguard, scrcpy, jadx |
+| `ad`        | impacket, NetExec, kerbrute, Samba/LDAP/Kerberos clients |
+
+## Adding or changing an environment
+
+1. Edit `environments.nix` (add a package attribute path, or a new environment entry).
+2. Run `nix run .#gen-catalog` to refresh `catalog.json`.
+3. `nix develop .#<env>` to try it.
+
+Before submitting a change, run `./tests/verify.sh`. It regenerates and compares
+the catalog, forces every environment and custom package derivation, and (when
+the RF-Swift repository is checked out beside this one) checks that the CLI's
+embedded catalog is synchronized. CI additionally builds every environment
+closure; those builds are release gates rather than allowed failures.
+To reproduce CI's build-and-command check for one closure locally, run
+`./tests/smoke-environment.sh automotive` (or another environment name).
+
+A package string is an attribute path into `pkgs` (for example `gnuradioPackages.osmosdr`), or the name of one of RF Swift's own derivations in `pkgs/`, which take priority. Anything unavailable on a given platform is dropped at evaluation with a trace, so one missing tool never breaks the whole shell.
+
+## Packaging tools (`pkgs/`)
+
+Most RF Swift tools are in nixpkgs. The rest live in `pkgs/`, in three flavours: plain source builds, forks (built by overriding a nixpkgs source), and proprietary vendor binaries (`autoPatchelfHook`). New source derivations ship with a placeholder hash you pin on the first build. See [`pkgs/README.md`](pkgs/README.md).
+
+## License
+
+Tool licenses are their own. The packaging in this repository follows RF Swift's license.

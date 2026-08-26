@@ -1,0 +1,32 @@
+# liba53: the A5/1, A5/3 and GEA GSM cipher library (PentHertz fork), a build
+# dependency of OpenBTS. Plain Makefile that hardcodes /usr/{lib,include}; we
+# build the shared object and install it into $out ourselves.
+{ lib, stdenv, fetchFromGitHub }:
+
+stdenv.mkDerivation {
+  pname = "liba53";
+  version = "unstable";
+
+  src = fetchFromGitHub {
+    owner = "PentHertz";
+    repo = "liba53";
+    rev = "master";
+    hash = "sha256-4ahnJ4qv/QFtND69BckanIKHURkQqmfr43m+O+PlJZw=";
+  };
+
+  # Default make target builds liba53.so.1.0 (+ the .so/.so.1 symlinks).
+  installPhase = ''
+    runHook preInstall
+    mkdir -p $out/lib $out/include
+    cp -P liba53.so* $out/lib/
+    cp a53.h $out/include/
+    runHook postInstall
+  '';
+
+  meta = {
+    description = "A5/1, A5/3 and GEA GSM cipher library (OpenBTS dependency)";
+    homepage = "https://github.com/PentHertz/liba53";
+    license = lib.licenses.gpl2Plus;
+    platforms = [ "x86_64-linux" ];
+  };
+}

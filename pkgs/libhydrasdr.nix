@@ -1,0 +1,30 @@
+# libhydrasdr: HydraSDR RFOne device library. Not in nixpkgs; the HydraSDR
+# forks (SDR++, gr-osmosdr, ...) depend on it, so we build it from source like
+# RF Swift does for its .deb builds.
+{ lib, stdenv, fetchFromGitHub, cmake, pkg-config, libusb1 }:
+
+stdenv.mkDerivation {
+  pname = "libhydrasdr";
+  version = "unstable";
+
+  # libhydrasdr lives in the hydrasdr-host repo (like libairspy in airspyone_host).
+  src = fetchFromGitHub {
+    owner = "hydrasdr";
+    repo = "hydrasdr-host";
+    rev = "main";
+    hash = "sha256-oPA8ILKlv+KpSkuG6oi+swlrN1sjUs21BW+MjYgwets=";
+  };
+
+  nativeBuildInputs = [ cmake pkg-config ];
+  buildInputs = [ libusb1 ];
+
+  # Older cmake_minimum_required guard for CMake 4.
+  cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" "-DINSTALL_UDEV_RULES=OFF" ];
+
+  meta = {
+    description = "HydraSDR RFOne device library";
+    homepage = "https://github.com/hydrasdr/libhydrasdr";
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.linux;
+  };
+}

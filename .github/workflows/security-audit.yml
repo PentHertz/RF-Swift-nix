@@ -1,0 +1,151 @@
+name: Security audit
+
+# Vulnerability / supply-chain audit of the tools RF Swift bundles.
+#
+# Unlike ci.yml (which proves the closures BUILD), this workflow asks whether the
+# things inside those closures have known VULNERABILITIES. It runs the layered
+# scan in scripts/security-audit.sh - vulnix (Nix-closure CVEs), syft (SBOM),
+# grype (SBOM CVEs), osv-scanner (OSV/GHSA supply-chain advisories) - against
+# every catalog environment, plus a flake.lock supply-chain check.
+#
+# Scanners fetch their advisory databases at run time, so unlike the build gates
+# this workflow needs network access. It reads the public binary cache so the
+# environment closures download instead of rebuilding.
+#
+# It is scheduled (new CVEs land against unchanged code), runnable on demand, and
+# runs on pull requests that touch the packaging so a newly-introduced vulnerable
+# dependency is caught in review.
+
+on:
+  schedule:
+    # Weekly, Monday 06:17 UTC (off the hour to avoid the scheduler stampede).
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      fail_on:
+        description: 'Fail the run if a finding is at or above this severity'
+        type: choice
+        default: none
+        options: [none, low, medium, high, critical]
+      format:
+        description: 'Report formats to generate'
+        type: string
+        default: stdout,txt,json,html,pdf
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'pkgs/**'
+      - 'environments.nix'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'scripts/security-audit.sh'
+      - '.github/workflows/security-audit.yml'
+
+permissions:
+  contents: read
+  # Allow uploading grype SARIF to the repository's code-scanning dashboard.
+  security-events: write
+
+concurrency:
+  group: security-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      envs: ${{ steps.list.outputs.envs }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        name: Read environment names from catalog.json
+        run: |
+          envs=$(jq -c '[.environments[].name]' catalog.json)
+          echo "envs=$envs" >> "$GITHUB_OUTPUT"
+
+  supply-chain:
+    name: Flake supply-chain check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Every flake input is pinned in flake.lock
+        run: |
+          # A locked input has a narHash and a pinned rev/ref. Fail if any input
+          # in the lock is missing its content hash (i.e. floating / unpinned).
+          missing=$(jq -r '
+            .nodes | to_entries[]
+            | select(.key != "root")
+            | select((.value.locked // {}) | has("narHash") | not)
+            | .key' flake.lock)
+          if [ -n "$missing" ]; then
+            echo "::error::flake inputs are not fully pinned: $missing"; exit 1
+          fi
+          echo "All flake inputs are pinned."
+      - name: Report input provenance and age
+        run: |
+          nix flake metadata --json \
+            | jq -r '.locks.nodes | to_entries[]
+                     | select(.value.locked.type? != null)
+                     | "\(.key): \(.value.locked.type) \(.value.locked.owner // "")/\(.value.locked.repo // "") @ \(.value.locked.rev // .value.locked.ref // "?")"' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+  audit:
+    name: Audit / ${{ matrix.env }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        env: ${{ fromJSON(needs.prepare.outputs.envs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Use the public binary cache (read only)
+        uses: cachix/cachix-action@v15
+        with:
+          name: ${{ vars.CACHIX_CACHE || 'rfswift' }}
+      - name: Audit ${{ matrix.env }}
+        # Report-only by default; a manual run can raise the gate. Scheduled and
+        # PR runs never fail on upstream CVEs - they publish artifacts and (for
+        # PRs) the SARIF dashboard - so a new upstream CVE does not block merges.
+        run: |
+          ./scripts/security-audit.sh --env "${{ matrix.env }}" \
+            --out "security-report/${{ matrix.env }}" \
+            --format "${{ github.event.inputs.format || 'stdout,txt,json,html,pdf' }}" \
+            --fail-on "${{ github.event.inputs.fail_on || 'none' }}"
+      - name: Environment audit summary
+        if: always()
+        run: |
+          if [ -f "security-report/${{ matrix.env }}/summary.txt" ]; then
+            {
+              echo "### Security audit: ${{ matrix.env }}";
+              echo '```';
+              cat "security-report/${{ matrix.env }}/summary.txt";
+              echo '```';
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload reports and SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report-${{ matrix.env }}
+          path: security-report/${{ matrix.env }}
+          if-no-files-found: warn
+      - name: Upload grype SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-report/${{ matrix.env }}
+          category: security-audit-${{ matrix.env }}
+        continue-on-error: true
