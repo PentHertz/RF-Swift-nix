@@ -21,10 +21,10 @@ rec {
   # https://signalhound.com/sigdownloads/SDK/
   signalhound-sdk = stdenv.mkDerivation {
     pname = "signalhound-sdk";
-    version = "07_06_26";
+    version = "08_26_26";
     src = fetchurl {
-      url = "https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_07_06_26.zip";
-      hash = "sha256-Oez+Sgij1zIJWmuYOZTiHutYBgq2nLcI0nuMNjWzhAY=";
+      url = "https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_08_26_26.zip";
+      hash = "sha256-G+ZwFjaXlNSzBJjNodunPeDrXKFocBq56LaoyfEeROY=";
     };
     nativeBuildInputs = [ unzip autoPatchelfHook ];
     buildInputs = [ libusb1 libftdi1 ccLib ];
@@ -58,12 +58,12 @@ rec {
   # https://signalhound.com/sigdownloads/Spike/
   signalhound-spike = stdenv.mkDerivation rec {
     pname = "signalhound-spike";
-    version = "4_0_15";
+    version = "4_0_16";
     dirname = "Spike(Ubuntu22.04x64)_${version}";
     src = fetchurl {
       url = "https://signalhound.com/sigdownloads/Spike/${dirname}.zip";
       name = "signalhound-spike.zip";
-      hash = "sha256-h/4lioEQf7ept+CJCxUquXaZV5xxnvpRHSufh6L0Jc4=";
+      hash = "sha256-+Wx39z+W/pFdF0i2rpnKeoXNxWOPZNP6OVEeNdJK61k=";
     };
     nativeBuildInputs = [ unzip autoPatchelfHook makeWrapper ];
     buildInputs = [ libusb1 libftdi1 ccLib qt5.qtbase ];
@@ -94,12 +94,12 @@ rec {
 
   signalhound-vsg60 = stdenv.mkDerivation rec {
     pname = "signalhound-vsg60";
-    version = "2_0_2";
+    version = "2_0_3";
     dirname = "VSG(Ubuntu22.04x64)_${version}";
     src = fetchurl {
       url = "https://signalhound.com/sigdownloads/VSG60/${dirname}.zip";
       name = "signalhound-vsg60.zip";
-      hash = "sha256-/P5hlbYFjBI4LiRhAr9dQxqBoIei9tsuKxsjf4ypePo=";
+      hash = "sha256-0KeME74HOwTuGxUoK3voSqM71lKKSYhain0S+Mz1OWE=";
     };
     nativeBuildInputs = [ unzip autoPatchelfHook makeWrapper ];
     buildInputs = [ libusb1 libftdi1 ccLib qt5.qtbase ];
@@ -145,8 +145,20 @@ rec {
     };
     nativeBuildInputs = [ unzip autoPatchelfHook makeWrapper ];
     buildInputs = [
-      qt5.qtbase libusb1 fftwFloat ccLib xcb-util-cursor libglvnd fontconfig
-      freetype dbus zlib libX11 libxcb libXext libXrender
+      qt5.qtbase
+      libusb1
+      fftwFloat
+      ccLib
+      xcb-util-cursor
+      libglvnd
+      fontconfig
+      freetype
+      dbus
+      zlib
+      libX11
+      libxcb
+      libXext
+      libXrender
     ];
     autoPatchelfIgnoreMissingDeps = true;
     dontWrapQtApps = true;

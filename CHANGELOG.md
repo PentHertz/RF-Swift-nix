@@ -10,6 +10,15 @@ binary's v4.0.0-dev.
 
 ### Added
 
+- Added Tailcat to the network environment, pinned from Tailscale's upstream
+  repository. It provides netcat-style encrypted peer-to-peer transport over
+  the Tailscale WireGuard/DERP data plane without its control plane.
+- Added an opt-in `pkg-gnuradio4`, pinned to 4.0.0-RC2 from the new official
+  `gnuradio/gnuradio4` repository. Its FetchContent dependencies are pinned for
+  sandboxed builds, its optional memory-prohibitive generated registry is
+  disabled, and GNU Radio 3.10 remains the default in SDR profiles.
+- Updated the pinned Signal Hound SDK to 08_26_26, Spike to 4.0.16, and VSG60
+  to 2.0.3 to match the current RF Swift images.
 - Matched the shared SDR image device base more closely in both `sdr_light`
   and `sdr_full`: PlutoSDR, SoapyRemote, SoapyUHD and SoapyBladeRF are explicit,
   and the pinned Signal Hound Spike/VSG60 and Harogic SAStudio frontends are
@@ -72,6 +81,8 @@ binary's v4.0.0-dev.
 
 ### Fixed
 
+- Pinned SSTImap to an immutable upstream commit and refreshed its source hash,
+  fixing the `network` cache job after upstream `master` moved.
 - Corrected the Nix SDR image mapping: `sdr_light` and telecom now use the light
   GNU Radio/OOT set, while `sdr_full` alone bundles the extended OOT batches.
   Remaining image-only device modules are listed explicitly in `missing`.

@@ -6,14 +6,16 @@ let
 in
 python3Packages.buildPythonApplication {
   pname = "sstimap";
-  version = "1.2.1-unstable";
+  version = "1.2.1-unstable-2026-08-21";
   format = "other";
 
   src = fetchFromGitHub {
     owner = "vladko312";
     repo = "SSTImap";
-    rev = "master";
-    hash = "sha256-G5oUyy0bQ2k6/veL/YwlNIKB5xUY+bRtL3RwuPhKJZg=";
+    # Do not use the mutable master ref here: fetchFromGitHub's fixed-output
+    # derivation must continue to produce the same source after upstream moves.
+    rev = "1c27fdb4a4cc7d55b66fc0e16937ee7de7047490";
+    hash = "sha256-voIzUn0mHd38KtZ+9/gzm/jFskD1IGB6oPxr6AW5mas=";
   };
 
   nativeBuildInputs = [ makeWrapper ];

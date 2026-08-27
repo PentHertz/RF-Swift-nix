@@ -38,6 +38,9 @@ with pkgs;
   libresdr-firmware = callPackage ./libresdr-firmware.nix { };
   ais-catcher = callPackage ./ais-catcher.nix { };
 
+  ## --- Network transport / tunnelling ----------------------------------
+  tailcat = callPackage ./tailcat.nix { };
+
   ## --- Hardware (PentHertz DSView .deb, opt-in) -------------------------
   dsview = libsForQt5.callPackage ./dsview.nix { };
   saleae-logic2 = callPackage ./saleae-logic2.nix { };
@@ -73,6 +76,9 @@ with pkgs;
   pwndbg = callPackage ./pwndbg.nix { };
 
   ## --- GNU Radio OOT modules (source builds) + bundled gnuradio ----------
+  # GR4 is the experimental, separately installable add-on used by the
+  # sdr_gnuradio4 image. GNU Radio 3.10 remains the default for every profile.
+  gnuradio4 = callPackage ./gnuradio4.nix { };
   gr-rds = callPackage ./oot/gr-rds.nix { };
   gr-iridium = callPackage ./oot/gr-iridium.nix { };
   gr-satellites = callPackage ./oot/gr-satellites.nix { };
@@ -268,8 +274,8 @@ with pkgs;
 ## --- Proprietary vendor binaries (SignalHound SDK/Spike, Harogic SDK) -------
 # Merged in so they are reachable as `pkg-signalhound-sdk`, etc.
 // vendor
-## --- Python 3.10 tools (Mirage, bluing), built against the py310 pin -------
-// (lib.optionalAttrs (py310 != null) {
+  ## --- Python 3.10 tools (Mirage, bluing), built against the py310 pin -------
+  // (lib.optionalAttrs (py310 != null) {
   mirage = py310.python310Packages.callPackage ./mirage.nix { };
   bluing = py310.python310Packages.callPackage ./bluing.nix {
     stdeb = py310.python310Packages.callPackage ./stdeb.nix { };
