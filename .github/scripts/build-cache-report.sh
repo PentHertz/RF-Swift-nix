@@ -40,7 +40,7 @@ jq -n \
     echo "## Relevant diagnostics"
     echo
     echo '```text'
-    grep -E 'error:|failed|hash mismatch|unsupported|not available|no space|disk.*full|Cannot build' "$log" | tail -80 || tail -80 "$log"
+    LC_ALL=C grep -aE 'error:|failed|hash mismatch|unsupported|not available|no space|disk.*full|Cannot build' "$log" | tail -80 || tail -80 "$log"
     echo '```'
   fi
 } > "$summary"
