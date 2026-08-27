@@ -3,14 +3,14 @@
 
 python3Packages.buildPythonApplication {
   pname = "scat";
-  version = "2.0.0";
+  version = "2.0.0-unstable-2026-08-26";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "fgsect";
     repo = "scat";
-    rev = "master";
-    hash = "sha256-CtBITIOpA1RYVGoIixTg6yNj0ofGmUX1iMrlYWN5H/Q=";
+    rev = "fc2a53699373148d1eb97617c0d58e9e2255f61a";
+    hash = "sha256-EMjYbBQIgKGmOBFXZOOuTtTRCGQmnWdI1JAd47zIQSg=";
   };
 
   build-system = [ python3Packages.hatchling ];

@@ -16,6 +16,23 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config xxd ];
   buildInputs = [ liquid-dsp fftwFloat libpcap hackrf libbladeRF uhd ];
+
+  # Upstream treats every non-32-bit-ARM Unix target as x86 and consequently
+  # passes -msse4.1 on aarch64. Keep the explicit SIMD flags where they are
+  # valid; AArch64 already includes Advanced SIMD in its baseline ISA.
+  postPatch = ''
+    substituteInPlace CMakeLists.txt \
+      --replace-fail \
+        'target_compile_options(ice9-bluetooth PRIVATE -msse4.1)' \
+        $'if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i.86")\n      target_compile_options(ice9-bluetooth PRIVATE -msse4.1)\n    endif()' \
+      --replace-fail \
+        'target_compile_options(test_window PRIVATE -msse4.1)' \
+        $'if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i.86")\n      target_compile_options(test_window PRIVATE -msse4.1)\n    endif()' \
+      --replace-fail \
+        'target_compile_options(test_pfbch2 PRIVATE -msse4.1)' \
+        $'if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i.86")\n      target_compile_options(test_pfbch2 PRIVATE -msse4.1)\n    endif()'
+  '';
+
   # gcc-15 header strictness on the vendored C sources.
   env.NIX_CFLAGS_COMPILE = "-Wno-error";
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
