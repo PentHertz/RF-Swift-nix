@@ -25,6 +25,11 @@ stdenv.mkDerivation {
     description = "HydraSDR RFOne device library";
     homepage = "https://github.com/hydrasdr/libhydrasdr";
     license = lib.licenses.gpl2Plus;
-    platforms = lib.platforms.linux;
+    # libusb + cmake, no Linux-only bits (udev rules disabled above), so it
+    # builds on macOS too. Linux-only here made every hydrasdr-dependent SDR
+    # tool (sdrpp-hydrasdr, gnuradio-rfswift, inspectrum-hydrasdr,
+    # gr-osmosdr-penthertz) refuse to evaluate on Darwin, breaking the whole
+    # SDR environment on macOS.
+    platforms = lib.platforms.unix;
   };
 }

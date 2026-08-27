@@ -65,6 +65,82 @@ jobs:
         run: |
           nix eval --raw ".#packages.x86_64-linux.${{ matrix.env }}.drvPath"
 
+  # macOS (Apple Silicon) evaluation. GitHub's macos-14 runners are arm64, so
+  # this forces every environment's aarch64-darwin derivation and catches
+  # Darwin-only breakage the Linux eval-check cannot see — e.g. a package marked
+  # platforms=linux that a macOS user pulls into an SDR environment, which makes
+  # the whole environment refuse to evaluate. Eval-only (no build) and a single
+  # runner looping over the envs, to keep macOS runner minutes bounded; an actual
+  # compile canary follows in build-check-darwin.
+  eval-check-darwin:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Force every environment's aarch64-darwin derivation (no build)
+        run: |
+          fails=""
+          for env in $(jq -r '.environments[].name' catalog.json); do
+            echo "::group::eval $env (aarch64-darwin)"
+            if nix eval --raw ".#packages.aarch64-darwin.$env.drvPath"; then
+              echo "  ok"
+            else
+              echo "::error::$env fails to evaluate on aarch64-darwin"
+              fails="$fails $env"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$fails" ]; then
+            echo "::error::aarch64-darwin evaluation failed for:$fails"
+            exit 1
+          fi
+      - name: No environment may pull qtwebengine into its Darwin closure
+        run: |
+          # qtwebengine is not cached for aarch64-darwin and its source build
+          # segfaults (patchShebangs over the Chromium tree). The flake's
+          # pyqtNoWebengineOverlay (pyqt6 withPdf=false on Darwin) keeps it out
+          # of the GNU Radio / Qt SDR closures. Assert it stays out — a cheap
+          # dry-run guard that catches the regression without a full build.
+          hits=""
+          for env in $(jq -r '.environments[].name' catalog.json); do
+            if nix build --dry-run ".#packages.aarch64-darwin.$env" 2>&1 | grep -qi qtwebengine; then
+              echo "::error::$env pulls qtwebengine into its aarch64-darwin closure"
+              hits="$hits $env"
+            fi
+          done
+          if [ -n "$hits" ]; then
+            echo "::error::qtwebengine leaked into Darwin closures for:$hits"
+            exit 1
+          fi
+          echo "No environment pulls qtwebengine on aarch64-darwin."
+
+  # Cheap macOS compile canary: actually build the custom source-built packages
+  # most likely to regress on Darwin (libusb/cmake SDR + hardware libs), plus the
+  # Darwin pyqt6 (withPdf=false) that GNU Radio's Qt stack depends on — so a
+  # broken macOS build is caught without compiling the full (huge) SDR closures.
+  build-check-darwin:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Build representative Darwin packages
+        run: |
+          nix build --no-link --print-out-paths \
+            ".#packages.aarch64-darwin.pkg-libhydrasdr" \
+            ".#packages.aarch64-darwin.pkg-proxmark5"
+          # The webengine-free pyqt6 must actually compile on macOS — it is the
+          # dependency that unblocks pyqtgraph / gnuradio-companion there.
+          nix build --no-link --print-out-paths \
+            ".#legacyPackages.aarch64-darwin.python3Packages.pyqt6"
+
   catalog-sync:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -88,7 +164,7 @@ jobs:
   required:
     name: Required Nix verification
     if: always()
-    needs: [prepare, eval-check, catalog-sync]
+    needs: [prepare, eval-check, eval-check-darwin, build-check-darwin, catalog-sync]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -96,9 +172,11 @@ jobs:
         env:
           PREPARE_RESULT: ${{ needs.prepare.result }}
           EVAL_RESULT: ${{ needs.eval-check.result }}
+          EVAL_DARWIN_RESULT: ${{ needs.eval-check-darwin.result }}
+          BUILD_DARWIN_RESULT: ${{ needs.build-check-darwin.result }}
           CATALOG_RESULT: ${{ needs.catalog-sync.result }}
         run: |
-          for result in "$PREPARE_RESULT" "$EVAL_RESULT" "$CATALOG_RESULT"; do
+          for result in "$PREPARE_RESULT" "$EVAL_RESULT" "$EVAL_DARWIN_RESULT" "$BUILD_DARWIN_RESULT" "$CATALOG_RESULT"; do
             if [ "$result" != success ]; then
               echo "::error::A required Nix verification job did not succeed."
               exit 1

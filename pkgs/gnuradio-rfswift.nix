@@ -2,7 +2,7 @@
 # in gnuradio-companion. Listing OOT packages next to `gnuradio` in an
 # environment does NOT make GRC see them; they must be in gnuradio's own prefix,
 # which is what `gnuradio.override { extraPackages = ... }` does.
-{ gnuradio, gnuradioPackages, gr-osmosdr-penthertz, gr-rds, gr-iridium
+{ lib, stdenv, gnuradio, gnuradioPackages, gr-osmosdr-penthertz, gr-rds, gr-iridium
 , gr-satellites, gr-gsm, gr-ais, gr-limesdr, gr-tempest, gr-dab
 , gr-foo, gr-adsb, gr-paint, gr-dect2, gr-nfc, gr-air-modes
 , gr-ieee802-11, gr-ieee802-15-4
@@ -13,8 +13,14 @@
 , gr-grnet, gr-aoa, gr-correctiq, gr-dsd, gr-nrsc5, gr-ntsc-rc, gr-mer, gr-flarm
 , gr-guiextra, gr-rftap, gr-radio_astro, gr-cessb }:
 
-(gnuradio.override {
-  extraPackages = [
+let
+  # The full OOT bundle. Some modules are Linux-only in nixpkgs (e.g. gr-difi);
+  # on Darwin those throw "not available on hostPlatform", which would make the
+  # whole GNU Radio derivation impossible to evaluate and break the SDR
+  # environment on macOS. Keep only modules available on the host — the same
+  # policy the flake's resolvePkg applies per environment — so gnuradio-companion
+  # still works on macOS with the modules that do build there.
+  wanted = [
     gr-osmosdr-penthertz
     gnuradioPackages.lora_sdr
     gnuradioPackages.gr-difi
@@ -30,6 +36,12 @@
     gr-grnet gr-aoa gr-correctiq gr-dsd gr-nrsc5 gr-ntsc-rc gr-mer gr-flarm
     gr-guiextra gr-rftap gr-radio_astro gr-cessb
   ];
+  availableForHost = p:
+    let ok = builtins.tryEval (lib.meta.availableOn stdenv.hostPlatform p);
+    in ok.success && ok.value;
+in
+(gnuradio.override {
+  extraPackages = builtins.filter availableForHost wanted;
 }).overrideAttrs (old: {
   # nixpkgs currently selects `gnuradio-config-info`, which is useful for
   # diagnostics but is not the command users expect to launch in a lazy RF

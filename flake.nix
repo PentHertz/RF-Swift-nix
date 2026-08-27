@@ -18,6 +18,22 @@
 
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
 
+      # On macOS, python3Packages.pyqt6 pulls qtwebengine via its `withPdf`
+      # default. qtwebengine is not cached for aarch64-darwin and its source
+      # build segfaults (in patchShebangs over the Chromium tree), which makes
+      # every Qt-GUI Python tool — pyqtgraph, and therefore GNU Radio's
+      # gnuradio-companion — impossible to build on macOS. pyqtgraph/GNU Radio
+      # do not use QtPdf/QtWebEngine, so drop it on Darwin. Linux keeps the full
+      # pyqt6 (qtwebengine is cached upstream there).
+      pyqtNoWebengineOverlay = final: prev:
+        prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+          pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
+            (pyfinal: pyprev: {
+              pyqt6 = pyprev.pyqt6.override { withPdf = false; };
+            })
+          ];
+        };
+
       # Allow unfree so the few tools that need it (and any vendor bits we add
       # later) resolve.
       pkgsFor = system: import nixpkgs {
@@ -29,6 +45,7 @@
           # android buildEnv fails even though a shallow devShell eval passes.
           android_sdk.accept_license = true;
         };
+        overlays = [ pyqtNoWebengineOverlay ];
       };
 
       lib = nixpkgs.lib;
@@ -170,7 +187,7 @@
             allowUnfree = true;
             android_sdk.accept_license = true;
           };
-          overlays = [ self.overlays.default ];
+          overlays = [ self.overlays.default pyqtNoWebengineOverlay ];
         });
 
       # The raw catalog, exposed for tooling / `nix eval .#catalog`
