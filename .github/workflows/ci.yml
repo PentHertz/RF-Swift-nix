@@ -117,6 +117,13 @@ jobs:
             exit 1
           fi
           echo "No environment pulls qtwebengine on aarch64-darwin."
+      - name: Cutter remains available in the Darwin reversing environment
+        run: |
+          if ! nix derivation show ".#packages.aarch64-darwin.reversing" | grep -q 'cutter-[0-9].*\.drv'; then
+            echo "::error::Cutter is missing from the aarch64-darwin reversing environment"
+            exit 1
+          fi
+          echo "Cutter is present without Qt WebEngine."
 
   # Cheap macOS compile canary: actually build the custom source-built packages
   # most likely to regress on Darwin (libusb/cmake SDR + hardware libs), plus the

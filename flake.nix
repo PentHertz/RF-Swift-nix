@@ -32,6 +32,16 @@
               pyqt6 = pyprev.pyqt6.override { withPdf = false; };
             })
           ];
+          # nixpkgs adds QtWebEngine unconditionally, although Cutter 2.5.0
+          # neither finds nor links it (the source only prepares OpenGL sharing
+          # for third-party plugins that may choose to use WebEngine). Keeping
+          # the base application WebEngine-free avoids an uncached Chromium
+          # build on Darwin without removing Cutter from the environment.
+          cutter = prev.cutter.overrideAttrs (old: {
+            buildInputs = builtins.filter
+              (input: input != prev.qt6.qtwebengine)
+              (old.buildInputs or [ ]);
+          });
         };
 
       # Allow unfree so the few tools that need it (and any vendor bits we add
