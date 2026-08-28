@@ -191,14 +191,21 @@
       # This is what the RF Swift "lazy" environment mode uses to build tools
       # step by step, the first time each is called, instead of all at once.
       legacyPackages = forAllSystems (system:
-        import nixpkgs {
-          inherit system;
-          config = {
-            allowUnfree = true;
-            android_sdk.accept_license = true;
+        let
+          base = import nixpkgs {
+            inherit system;
+            config = {
+              allowUnfree = true;
+              android_sdk.accept_license = true;
+            };
+            overlays = [ self.overlays.default pyqtNoWebengineOverlay ];
           };
-          overlays = [ self.overlays.default pyqtNoWebengineOverlay ];
-        });
+        in
+        # The reusable overlay cannot carry the separate nixpkgs-py310 input.
+        # Merge customFor here so user-facing names such as `mirage` and
+        # `bluing` resolve for `rfswift nix install`, which installs from
+        # legacyPackages.<system>.<catalog-name>.
+        base // customFor system);
 
       # The raw catalog, exposed for tooling / `nix eval .#catalog`
       catalog = environments;

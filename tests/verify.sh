@@ -44,6 +44,15 @@ for package in "${custom_packages[@]}"; do
   echo ok
 done
 
+# Python 3.10-only custom tools are supplied by a separate nixpkgs pin, which
+# the generic overlay cannot carry. They must still be exposed by their catalog
+# names because `rfswift nix install` resolves through legacyPackages.
+for package in mirage bluing; do
+  printf '  legacyPackages.%-23s' "$package"
+  "${nix_cmd[@]}" eval --raw ".#legacyPackages.${system}.\"${package}\".drvPath" >/dev/null
+  echo ok
+done
+
 echo "[5/5] RF Swift's embedded catalog matches, when a sibling checkout exists"
 embedded=../RF-Swift/go/rfswift/nix/catalog.json
 if [[ -f "$embedded" ]]; then
