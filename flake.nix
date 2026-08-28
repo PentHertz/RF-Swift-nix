@@ -30,6 +30,14 @@
           pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
             (pyfinal: pyprev: {
               pyqt6 = pyprev.pyqt6.override { withPdf = false; };
+              # crccheck is pure Python, but nixpkgs marks its meta.platforms
+              # linux-only. That wrongly drops `cantools` (and the automotive
+              # env's DBC tooling) on macOS, even though CAN over USB adapters
+              # (python-can's slcan/gs_usb/pcan backends) works fine there.
+              # Widen it so cantools resolves on Darwin.
+              crccheck = pyprev.crccheck.overrideAttrs (o: {
+                meta = (o.meta or { }) // { platforms = prev.lib.platforms.unix; };
+              });
             })
           ];
           # nixpkgs adds QtWebEngine unconditionally, although Cutter 2.5.0
@@ -41,6 +49,14 @@
             buildInputs = builtins.filter
               (input: input != prev.qt6.qtwebengine)
               (old.buildInputs or [ ]);
+          });
+          # trunk-recorder 5.2.1's bundled op25 imbe_vocoder does not compile
+          # against boost 1.89 with the Apple clang on this pin (in-class
+          # initializer for a static data member is not a constant expression).
+          # It builds fine on Linux; mark it linux-only so resolvePkg drops it on
+          # Darwin instead of breaking the whole sdr_full environment build.
+          trunk-recorder = prev.trunk-recorder.overrideAttrs (old: {
+            meta = (old.meta or { }) // { platforms = prev.lib.platforms.linux; };
           });
         };
 

@@ -24,7 +24,11 @@ jq -e '
 ' catalog.json >/dev/null
 
 echo "[3/5] every environment forces to an installable derivation on $system"
-mapfile -t environments < <(jq -r '.environments[].name' catalog.json)
+# `mapfile` is bash 4+; read into the array portably so this also runs under the
+# bash 3.2 that ships on macOS.
+environments=()
+while IFS= read -r line; do environments+=("$line"); done \
+  < <(jq -r '.environments[].name' catalog.json)
 for environment in "${environments[@]}"; do
   printf '  %-16s' "$environment"
   "${nix_cmd[@]}" eval --raw ".#packages.${system}.\"${environment}\".drvPath" >/dev/null
@@ -34,23 +38,37 @@ done
 echo "[4/5] all exposed custom packages force to derivations on $system"
 # Do this one derivation per Nix process. A monolithic `nix flake check` retains
 # the complete graph and can consume many GiB for this package set.
-mapfile -t custom_packages < <(
+custom_packages=()
+while IFS= read -r line; do custom_packages+=("$line"); done < <(
   "${nix_cmd[@]}" eval --json ".#packages.${system}" --apply builtins.attrNames \
     | jq -r '.[] | select(startswith("pkg-"))'
 )
+# A custom package is expected to force everywhere it is *available*. Many are
+# legitimately Linux-only (proprietary vendor SDKs, SocketCAN tools, ...), so on
+# a non-Linux host forcing them raises "not available on the requested
+# hostPlatform"; that is a skip, not a failure. Anything else is a real break.
+force_or_skip() {
+  local attr=$1 label=$2 out
+  printf '  %-38s' "$label"
+  if out=$("${nix_cmd[@]}" eval --raw "$attr" 2>&1); then
+    echo ok
+  elif printf '%s' "$out" | grep -q "not available on the requested hostPlatform"; then
+    echo "skipped (unavailable on ${system})"
+  else
+    printf '\n%s\n' "$out" >&2
+    exit 1
+  fi
+}
+
 for package in "${custom_packages[@]}"; do
-  printf '  %-38s' "$package"
-  "${nix_cmd[@]}" eval --raw ".#packages.${system}.\"${package}\".drvPath" >/dev/null
-  echo ok
+  force_or_skip ".#packages.${system}.\"${package}\".drvPath" "$package"
 done
 
 # Python 3.10-only custom tools are supplied by a separate nixpkgs pin, which
 # the generic overlay cannot carry. They must still be exposed by their catalog
 # names because `rfswift nix install` resolves through legacyPackages.
 for package in mirage bluing; do
-  printf '  legacyPackages.%-23s' "$package"
-  "${nix_cmd[@]}" eval --raw ".#legacyPackages.${system}.\"${package}\".drvPath" >/dev/null
-  echo ok
+  force_or_skip ".#legacyPackages.${system}.\"${package}\".drvPath" "legacyPackages.${package}"
 done
 
 echo "[5/5] RF Swift's embedded catalog matches, when a sibling checkout exists"

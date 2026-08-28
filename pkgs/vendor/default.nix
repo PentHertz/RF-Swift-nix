@@ -9,7 +9,8 @@
 { pkgs }:
 
 let
-  inherit (pkgs) lib fetchurl stdenv autoPatchelfHook makeWrapper unzip
+  inherit (pkgs) lib fetchurl stdenv autoPatchelfHook fixDarwinDylibNames
+    makeWrapper unzip
     libusb1 fftwFloat libftdi1 qt5 xcb-util-cursor libglvnd fontconfig freetype
     dbus zlib;
   inherit (pkgs.xorg) libX11 libxcb libXext libXrender;
@@ -26,22 +27,44 @@ rec {
       url = "https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_08_26_26.zip";
       hash = "sha256-G+ZwFjaXlNSzBJjNodunPeDrXKFocBq56LaoyfEeROY=";
     };
-    nativeBuildInputs = [ unzip autoPatchelfHook ];
-    buildInputs = [ libusb1 libftdi1 ccLib ];
+    # ELF libs (Linux) need autoPatchelf; the macOS arm64 dylibs need their
+    # install names fixed to absolute store paths so consumers (URH's ctypes
+    # loader) resolve them.
+    nativeBuildInputs = [ unzip ]
+      ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ]
+      ++ lib.optionals stdenv.hostPlatform.isDarwin [ fixDarwinDylibNames ];
+    buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ libusb1 libftdi1 ccLib ];
     autoPatchelfIgnoreMissingDeps = true;
     dontBuild = true;
-    # Extract only the Linux libraries and headers. The zip also ships Windows
-    # DLLs and macOS dylibs we do not need (and unpacking them all is large).
+    # Extract the libraries for this platform, plus the (arch-independent) API
+    # headers. The zip also ships Windows DLLs and the other platforms' libs,
+    # which we skip (unpacking them all is large). The SDK ships macOS arm64
+    # dylibs for the BB/SM/SP/VSG device series, so Darwin is a real target.
     unpackPhase = ''
       runHook preUnpack
+    '' + (if stdenv.hostPlatform.isDarwin then ''
+      unzip -q -o "$src" '*/lib/macos_arm/*' '*.h' -d src
+    '' else ''
       unzip -q -o "$src" '*/lib/linux*/*' '*.h' -d src || \
         unzip -q -o "$src" '*linux*' '*.h' -d src
+    '') + ''
       runHook postUnpack
     '';
     installPhase = ''
       runHook preInstall
       mkdir -p $out/lib $out/include
+    '' + (if stdenv.hostPlatform.isDarwin then ''
+      find src -type f -name 'lib*_api*.dylib' -exec cp -a {} $out/lib/ \;
+      # Provide the unversioned soname symlink linkers expect
+      # (libbb_api.dylib -> libbb_api.5.0.11.dylib, etc.).
+      for f in "$out"/lib/lib*_api.*.dylib; do
+        [ -e "$f" ] || continue
+        base=$(basename "$f"); stem=''${base%%.*}
+        ln -sf "$base" "$out/lib/$stem.dylib"
+      done
+    '' else ''
       find src -type f -name 'lib*_api.so*' -exec cp -a {} $out/lib/ \;
+    '') + ''
       find src -type f -name '*.h' -exec cp -a {} $out/include/ \; 2>/dev/null || true
       runHook postInstall
     '';
@@ -50,7 +73,7 @@ rec {
       homepage = "https://signalhound.com/software/";
       license = lib.licenses.unfree;
       sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
-      platforms = [ "x86_64-linux" ];
+      platforms = [ "x86_64-linux" "aarch64-darwin" ];
     };
   };
 
