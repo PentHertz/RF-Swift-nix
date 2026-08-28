@@ -44,9 +44,13 @@ rec {
       runHook preUnpack
     '' + (if stdenv.hostPlatform.isDarwin then ''
       unzip -q -o "$src" '*/lib/macos_arm/*' '*.h' -d src
+    '' else if stdenv.hostPlatform.isAarch64 then ''
+      unzip -q -o "$src" '*/lib/aarch64/*' '*.h' -d src
     '' else ''
-      unzip -q -o "$src" '*/lib/linux*/*' '*.h' -d src || \
-        unzip -q -o "$src" '*linux*' '*.h' -d src
+      # x86_64 APIs use both linux_x64 (modern analyzers) and linux (legacy
+      # TG/VSG25 APIs). Select Ubuntu builds where distributions are present.
+      unzip -q -o "$src" '*/lib/linux_x64/Ubuntu 18.04/*' \
+        '*/lib/linux/*' '*.h' -d src
     '') + ''
       runHook postUnpack
     '';
@@ -64,6 +68,15 @@ rec {
       done
     '' else ''
       find src -type f -name 'lib*_api.so*' -exec cp -a {} $out/lib/ \;
+      for f in "$out"/lib/lib*_api.so.*; do
+        [ -e "$f" ] || continue
+        base=$(basename "$f")
+        stem=''${base%%.so.*}
+        version=''${base#*.so.}
+        major=''${version%%.*}
+        ln -sf "$base" "$out/lib/$stem.so.$major"
+        ln -sf "$stem.so.$major" "$out/lib/$stem.so"
+      done
     '') + ''
       find src -type f -name '*.h' -exec cp -a {} $out/include/ \; 2>/dev/null || true
       runHook postInstall
@@ -73,7 +86,7 @@ rec {
       homepage = "https://signalhound.com/software/";
       license = lib.licenses.unfree;
       sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
-      platforms = [ "x86_64-linux" "aarch64-darwin" ];
+      platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
     };
   };
 
