@@ -1,0 +1,61 @@
+name: Nix maintenance updates
+
+on:
+  schedule:
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      update_flake:
+        description: Update flake inputs and open a pull request
+        required: false
+        type: boolean
+        default: false
+      update_sources:
+        description: Update packages that explicitly track a GitHub branch
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Vendor download report
+        run: scripts/package-maintenance.sh vendor-report --check-urls | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Git source update report
+        run: scripts/update-sources.sh | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Update explicitly branch-tracked package sources
+        if: github.event_name == 'schedule' || inputs.update_sources
+        run: scripts/update-sources.sh --write
+      - name: Optionally update pinned flake inputs
+        if: inputs.update_flake
+        run: nix flake update
+      - name: Verify updates
+        if: github.event_name == 'schedule' || inputs.update_sources || inputs.update_flake
+        run: |
+          scripts/package-maintenance.sh audit
+          nix eval --raw .#packages.x86_64-linux.network.drvPath
+      - name: Open update pull request
+        if: github.event_name == 'schedule' || inputs.update_sources || inputs.update_flake
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/nix-maintenance-update
+          delete-branch: true
+          commit-message: 'nix: update maintained source pins'
+          title: 'nix: update maintained source pins'
+          body: |
+            Automated RF Swift Nix maintenance refresh. Only packages declaring
+            an explicit `updateBranch` are moved by the source updater; fixed
+            release and commit pins remain unchanged.
+
+            The maintenance audit and representative environment evaluation ran before this PR was opened. Full CI remains authoritative.

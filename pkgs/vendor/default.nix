@@ -3,9 +3,8 @@
 # PentHertz GitHub mirror for Harogic), so `fetchurl` fetches them directly;
 # allowUnfree (set in flake.nix) covers their licenses. No manual download.
 #
-# The hashes use lib.fakeHash and must be pinned on first build (they are large,
-# so pin on a machine with disk headroom): `nix build .#pkg-signalhound-sdk`
-# etc., then paste the reported hash.
+# Version, URL, hash, and platform paths live in sources.json so maintainers can
+# update commercial downloads without searching through build logic.
 { pkgs }:
 
 let
@@ -16,16 +15,64 @@ let
   inherit (pkgs.xorg) libX11 libxcb libXext libXrender;
   mkVendorBinary = pkgs.callPackage ./mkVendorBinary.nix { };
   ccLib = stdenv.cc.cc.lib;
+  sources = builtins.fromJSON (builtins.readFile ./sources.json);
+  shSdk = sources."signalhound-sdk";
+  spikeSource = sources."signalhound-spike";
+  vsgSource = sources."signalhound-vsg60";
+  sastudioSource = sources.sastudio;
+  sastudioArtifact = sastudioSource.artifacts.${stdenv.hostPlatform.system}
+    or sastudioSource.artifacts."x86_64-linux";
+  sastudioSource_4_3_55_35 = sources."sastudio-4_3_55_35";
+  sastudioArtifact_4_3_55_35 =
+    sastudioSource_4_3_55_35.artifacts.${stdenv.hostPlatform.system}
+      or sastudioSource_4_3_55_35.artifacts."x86_64-linux";
+  htraSource = sources."harogic-htra-sdk";
+  htraSource_0_55_64 = sources."harogic-htra-sdk-0_55_64";
+  mkHarogicHtraSdk = source: mkVendorBinary {
+    pname = "harogic-htra-sdk";
+    version = source.version;
+    src = fetchurl {
+      inherit (source) url hash;
+    };
+    libraries = [ libusb1 ccLib fftwFloat ];
+    extraInstall =
+      let
+        sdkArch = source.platformPaths.${stdenv.hostPlatform.system}
+          or source.platformPaths."x86_64-linux";
+      in
+      ''
+        mkdir -p $out/lib $out/include
+        sdkLibRoot=$(find $out/opt/harogic-htra-sdk -type d -path '*/htraapi/lib' -print -quit)
+        [ -n "$sdkLibRoot" ] || { echo "HTRA SDK library directory not found" >&2; exit 1; }
+        # The archive contains multiple CPU architectures. Keep only the native
+        # one so autoPatchelf never processes a foreign ELF binary. Older releases
+        # have an additional Install_HTRA_SDK top-level directory.
+        find "$sdkLibRoot" -mindepth 1 -maxdepth 1 \
+          -type d ! -name '${sdkArch}' -exec rm -rf {} +
+        cp -a "$sdkLibRoot/${sdkArch}"/libhtra*.so* $out/lib/
+        for library in $out/lib/libhtra*.so.*; do
+          [ -e "$library" ] || continue
+          base=$(basename "$library")
+          stem=''${base%%.so.*}
+          ln -sf "$base" "$out/lib/$stem.so"
+        done
+        find $out/opt/harogic-htra-sdk -name '*.h' -exec cp -a {} $out/include/ \; 2>/dev/null || true
+      '';
+    meta = {
+      description = "Harogic HTRA SDK ${source.version} (SAxxxx real-time spectrum analyzers)";
+      homepage = "https://www.harogic.com/";
+      platforms = [ "x86_64-linux" "aarch64-linux" ];
+    };
+  };
 in
 rec {
   # Signal Hound device SDK: BB60/BB60D, SM, SP, SA and VSG APIs.
   # https://signalhound.com/sigdownloads/SDK/
   signalhound-sdk = stdenv.mkDerivation {
     pname = "signalhound-sdk";
-    version = "08_26_26";
+    version = shSdk.version;
     src = fetchurl {
-      url = "https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_08_26_26.zip";
-      hash = "sha256-G+ZwFjaXlNSzBJjNodunPeDrXKFocBq56LaoyfEeROY=";
+      inherit (shSdk) url hash;
     };
     # ELF libs (Linux) need autoPatchelf; the macOS arm64 dylibs need their
     # install names fixed to absolute store paths so consumers (URH's ctypes
@@ -94,12 +141,11 @@ rec {
   # https://signalhound.com/sigdownloads/Spike/
   signalhound-spike = stdenv.mkDerivation rec {
     pname = "signalhound-spike";
-    version = "4_0_16";
-    dirname = "Spike(Ubuntu22.04x64)_${version}";
+    version = spikeSource.version;
+    dirname = spikeSource.platformPaths."x86_64-linux";
     src = fetchurl {
-      url = "https://signalhound.com/sigdownloads/Spike/${dirname}.zip";
+      inherit (spikeSource) url hash;
       name = "signalhound-spike.zip";
-      hash = "sha256-+Wx39z+W/pFdF0i2rpnKeoXNxWOPZNP6OVEeNdJK61k=";
     };
     nativeBuildInputs = [ unzip autoPatchelfHook makeWrapper ];
     buildInputs = [ libusb1 libftdi1 ccLib qt5.qtbase ];
@@ -130,12 +176,11 @@ rec {
 
   signalhound-vsg60 = stdenv.mkDerivation rec {
     pname = "signalhound-vsg60";
-    version = "2_0_3";
-    dirname = "VSG(Ubuntu22.04x64)_${version}";
+    version = vsgSource.version;
+    dirname = vsgSource.platformPaths."x86_64-linux";
     src = fetchurl {
-      url = "https://signalhound.com/sigdownloads/VSG60/${dirname}.zip";
+      inherit (vsgSource) url hash;
       name = "signalhound-vsg60.zip";
-      hash = "sha256-0KeME74HOwTuGxUoK3voSqM71lKKSYhain0S+Mz1OWE=";
     };
     nativeBuildInputs = [ unzip autoPatchelfHook makeWrapper ];
     buildInputs = [ libusb1 libftdi1 ccLib qt5.qtbase ];
@@ -172,12 +217,12 @@ rec {
   # Large binary: pin the hash on first build (`nix build .#pkg-sastudio`).
   sastudio = stdenv.mkDerivation rec {
     pname = "sastudio";
-    version = "4.4.55.48";
-    tag = "v0.55.88";
-    prog = "SAStudio4_${version}_amd64";
+    version = sastudioSource.version;
+    tag = sastudioSource.tag;
+    prog = sastudioSource.platformPaths.${stdenv.hostPlatform.system}
+      or sastudioSource.platformPaths."x86_64-linux";
     src = fetchurl {
-      url = "https://github.com/PentHertz/rfswift_harogic_install/releases/download/${tag}/${prog}.zip";
-      hash = "sha256-qdwuH6o1o0TpHQxtSJvWwC4ObAA9XN/i/ibSCScalYA=";
+      inherit (sastudioArtifact) url hash;
     };
     nativeBuildInputs = [ unzip autoPatchelfHook makeWrapper ];
     buildInputs = [
@@ -219,28 +264,29 @@ rec {
       homepage = "https://www.harogic.com/";
       license = lib.licenses.unfree;
       sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
-      platforms = [ "x86_64-linux" ];
+      platforms = [ "x86_64-linux" "aarch64-linux" ];
       mainProgram = "sastudio";
     };
   };
 
-  # Harogic HTRA SDK (libhtra_api), from the public PentHertz mirror RF Swift uses.
-  harogic-htra-sdk = mkVendorBinary {
-    pname = "harogic-htra-sdk";
-    version = "0.55.64";
+  # Retain the preceding application/SDK-compatible release as a selectable
+  # fallback. overrideAttrs reuses the packaging and wrappers while replacing
+  # only the version-specific archive.
+  sastudio-4_3_55_35 = sastudio.overrideAttrs (_: {
+    version = sastudioSource_4_3_55_35.version;
+    tag = sastudioSource_4_3_55_35.tag;
+    prog = sastudioSource_4_3_55_35.platformPaths.${stdenv.hostPlatform.system}
+      or sastudioSource_4_3_55_35.platformPaths."x86_64-linux";
     src = fetchurl {
-      url = "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.64/Install_HTRA_SDK.zip";
-      hash = "sha256-rpJvNf9b9paLVmTlsf24GlCjekRJexYx4ygyyxUA7cY=";
+      inherit (sastudioArtifact_4_3_55_35) url hash;
     };
-    libraries = [ libusb1 ccLib fftwFloat ];
-    extraInstall = ''
-      mkdir -p $out/lib $out/include
-      find $out/opt/harogic-htra-sdk -name 'libhtra*.so*' -exec cp -a {} $out/lib/ \;
-      find $out/opt/harogic-htra-sdk -name '*.h' -exec cp -a {} $out/include/ \; 2>/dev/null || true
-    '';
-    meta = {
-      description = "Harogic HTRA SDK (SAxxxx real-time spectrum analyzers)";
-      homepage = "https://www.harogic.com/";
-    };
-  };
+  });
+  sastudio-4_4_55_48 = sastudio;
+
+  # Keep supported Harogic releases side by side: an SDK update can regress on
+  # particular customer hardware. The unversioned attribute is the recommended
+  # default; users can deliberately pin either versioned attribute.
+  harogic-htra-sdk-0_55_64 = mkHarogicHtraSdk htraSource_0_55_64;
+  harogic-htra-sdk-0_55_88 = mkHarogicHtraSdk htraSource;
+  harogic-htra-sdk = harogic-htra-sdk-0_55_88;
 }

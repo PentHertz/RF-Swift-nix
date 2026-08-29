@@ -168,10 +168,24 @@ jobs:
           fi
           echo "catalog.json is in sync."
 
+  maintenance-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Validate package-maintenance metadata and scripts
+        run: tests/maintenance.sh
+      - name: Ensure vendor download URLs remain reachable
+        run: scripts/package-maintenance.sh vendor-report --check-urls
+
   required:
     name: Required Nix verification
     if: always()
-    needs: [prepare, eval-check, eval-check-darwin, build-check-darwin, catalog-sync]
+    needs: [prepare, eval-check, eval-check-darwin, build-check-darwin, catalog-sync, maintenance-audit]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -182,8 +196,9 @@ jobs:
           EVAL_DARWIN_RESULT: ${{ needs.eval-check-darwin.result }}
           BUILD_DARWIN_RESULT: ${{ needs.build-check-darwin.result }}
           CATALOG_RESULT: ${{ needs.catalog-sync.result }}
+          MAINTENANCE_RESULT: ${{ needs.maintenance-audit.result }}
         run: |
-          for result in "$PREPARE_RESULT" "$EVAL_RESULT" "$EVAL_DARWIN_RESULT" "$BUILD_DARWIN_RESULT" "$CATALOG_RESULT"; do
+          for result in "$PREPARE_RESULT" "$EVAL_RESULT" "$EVAL_DARWIN_RESULT" "$BUILD_DARWIN_RESULT" "$CATALOG_RESULT" "$MAINTENANCE_RESULT"; do
             if [ "$result" != success ]; then
               echo "::error::A required Nix verification job did not succeed."
               exit 1

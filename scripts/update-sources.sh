@@ -15,8 +15,9 @@
 #     to move the nixpkgs baseline.
 #
 # Modes:
-#   (default)         check only: for each git-pinned package, show the pinned rev
-#                     and whether a newer commit exists on its tracked branch.
+#   (default)         check only: for each branch-tracked package, show the pinned
+#                     rev and whether a newer commit exists. Fixed pins are shown
+#                     as such and are never compared with a mutable default branch.
 #   --write           apply updates: re-pin each selected package to the latest
 #                     commit of its branch (rev + hash rewritten in the .nix).
 #   --refresh-hashes  do not move the rev; only recompute the hash for the
@@ -56,19 +57,20 @@ done
 c() { [[ -t 1 ]] && printf '%b' "$1" || true; }
 G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; Z=$'\e[0m'
 
-# Extract "owner repo rev hash" from the (first) fetchFromGitHub block in a file.
+# Extract "owner repo rev hash updateBranch" from the first GitHub source.
 # Portable: grep the first of each field rather than relying on gawk extensions.
 field() { grep -m1 -oE "$2[[:space:]]*=[[:space:]]*\"[^\"]*\"" "$1" | sed -E 's/.*"([^"]*)".*/\1/'; }
 extract() {
   local f="$1"
-  local owner repo rev hash
+  local owner repo rev hash tracked
   owner=$(field "$f" owner); repo=$(field "$f" repo)
   rev=$(field "$f" rev);     hash=$(field "$f" hash)
-  [[ -n "$owner" && -n "$repo" ]] && printf '%s %s %s %s\n' "$owner" "$repo" "$rev" "$hash"
+  tracked=$(field "$f" updateBranch)
+  [[ -n "$owner" && -n "$repo" ]] && printf '%s %s %s %s %s\n' "$owner" "$repo" "$rev" "$hash" "$tracked"
 }
 
-# Gather target files: those under pkgs/ with a fetchFromGitHub source.
-mapfile -t files < <(grep -rl "fetchFromGitHub" pkgs/ 2>/dev/null | sort)
+# Gather normal fetchFromGitHub derivations and declarative source definitions.
+mapfile -t files < <(rg -l 'fetchFromGitHub|updateBranch[[:space:]]*=' pkgs --glob '*.nix' | sort -u)
 if [[ ${#only[@]} -gt 0 ]]; then
   sel=()
   for f in "${files[@]}"; do
@@ -83,7 +85,7 @@ echo "RF Swift source update ($mode) over ${#files[@]} package file(s)"
 updated=0; checked=0
 
 for f in "${files[@]}"; do
-  read -r owner reponame rev hash < <(extract "$f")
+  read -r owner reponame rev hash tracked_branch < <(extract "$f")
   [[ -z "${owner:-}" || -z "${reponame:-}" ]] && continue
   checked=$((checked+1))
   name=$(basename "$f" .nix)
@@ -91,8 +93,13 @@ for f in "${files[@]}"; do
 
   case "$mode" in
     check)
-      # Latest commit on the tracked ref (branch override, else default HEAD).
-      ref="HEAD"; [[ -n "$branch" ]] && ref="refs/heads/$branch"
+      # Latest commit on the explicit tracked ref (or one-off branch override).
+      selected_branch=${branch:-${tracked_branch:-}}
+      if [[ -z "$selected_branch" ]]; then
+        printf '  %-26s %sfixed pin%s (%.12s)\n' "$name" "$(c "$G")" "$(c "$Z")" "$rev"
+        continue
+      fi
+      ref="refs/heads/$selected_branch"
       latest=$(run_tool git ls-remote "$url" "$ref" 2>/dev/null | awk '{print $1; exit}')
       if [[ -z "$latest" ]]; then
         printf '  %-26s %s? cannot reach %s/%s%s\n' "$name" "$(c "$Y")" "$owner" "$reponame" "$(c "$Z")"
@@ -104,13 +111,20 @@ for f in "${files[@]}"; do
       fi
       ;;
     write|refresh)
-      local_args=(--quiet)
+      local_args=("$owner" "$reponame")
       if [[ "$mode" == "refresh" ]]; then
         local_args+=(--rev "$rev")
-      elif [[ -n "$branch" ]]; then
-        local_args+=(--rev "refs/heads/$branch")
+      elif [[ -n "$branch" || -n "${tracked_branch:-}" ]]; then
+        selected_branch=${branch:-$tracked_branch}
+        local_args+=(--rev "refs/heads/$selected_branch")
+      else
+        printf '  %-26s %sfixed pin (skipped)%s\n' "$name" "$(c "$G")" "$(c "$Z")"
+        continue
       fi
-      out=$(run_tool nix-prefetch-git "${local_args[@]}" "$url" 2>/dev/null)
+      # fetchFromGitHub uses GitHub archive/NAR hashing. nix-prefetch-git can
+      # produce a different hash for the same revision, so use the matching
+      # GitHub prefetcher here.
+      out=$(run_tool nix-prefetch-github "${local_args[@]}" 2>/dev/null)
       newrev=$(echo "$out" | jq -r '.rev // empty' 2>/dev/null)
       newhash=$(echo "$out" | jq -r '.hash // empty' 2>/dev/null)
       if [[ -z "$newrev" || -z "$newhash" ]]; then
@@ -122,6 +136,14 @@ for f in "${files[@]}"; do
       # Rewrite the rev and hash lines of this file's fetchFromGitHub block.
       sed -i -E "s|(rev[[:space:]]*=[[:space:]]*)\"[^\"]*\"|\1\"${newrev}\"|" "$f"
       sed -i -E "s|(hash[[:space:]]*=[[:space:]]*)\"[^\"]*\"|\1\"${newhash}\"|" "$f"
+      # Keep conventional unstable versions truthful. A transient API failure
+      # must not discard an otherwise valid rev/hash refresh.
+      commit_date=$(curl -fsSL --retry 2 \
+        "https://api.github.com/repos/${owner}/${reponame}/commits/${newrev}" 2>/dev/null \
+        | jq -r '.commit.committer.date // empty' | cut -c1-10 || true)
+      if [[ "$commit_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        sed -i -E "s|(version[[:space:]]*=[[:space:]]*\"[0-9]+-unstable-)[0-9]{4}-[0-9]{2}-[0-9]{2}(\")|\1${commit_date}\2|" "$f"
+      fi
       printf '  %-26s %sre-pinned%s %.12s -> %.12s\n' "$name" "$(c "$Y")" "$(c "$Z")" "$rev" "$newrev"
       updated=$((updated+1))
       ;;

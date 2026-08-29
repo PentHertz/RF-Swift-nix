@@ -5,6 +5,13 @@ right fork) in nixpkgs. `default.nix` returns the whole set; `flake.nix` merges
 it in so environments can reference these names directly, and it takes priority
 over a nixpkgs attribute of the same name.
 
+For the supported contributor workflow, start with
+[`docs/adding-packages.md`](../docs/adding-packages.md). The unified command is:
+
+```console
+scripts/package-maintenance.sh help
+```
+
 Three kinds of packages live here.
 
 ## 1. Source builds
@@ -99,10 +106,7 @@ locally) to catch any packages the new nixpkgs renamed or dropped.
 
 ### Vendor blobs (`vendor/`)
 
-These use `requireFile`, so their hash is the hash of the file you downloaded:
-
-```
-nix hash file signal_hound_sdk.zip   # prints sha256-...
-```
-
-Paste it into the derivation's `hash =`.
+Public commercial download pins live in `vendor/sources.json`. Update them with
+`scripts/package-maintenance.sh vendor-update`; it downloads and hashes the
+artifact before changing the manifest. EULA/login-protected downloads may still
+use `requireFile` in a custom derivation.

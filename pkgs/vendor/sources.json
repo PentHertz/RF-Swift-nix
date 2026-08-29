@@ -1,0 +1,142 @@
+{
+  "signalhound-sdk": {
+    "version": "08_26_26",
+    "url": "https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_08_26_26.zip",
+    "hash": "sha256-G+ZwFjaXlNSzBJjNodunPeDrXKFocBq56LaoyfEeROY=",
+    "homepage": "https://signalhound.com/software/signal-hound-software-development-kit-sdk/",
+    "versionProbe": {
+      "type": "regex",
+      "url": "https://signalhound.com/software/signal-hound-software-development-kit-sdk/",
+      "pattern": "signal_hound_sdk_[0-9_]+\\.zip",
+      "prefix": "signal_hound_sdk_",
+      "suffix": ".zip"
+    },
+    "platformPaths": {
+      "x86_64-linux": "linux_x64/Ubuntu 18.04",
+      "aarch64-linux": "aarch64",
+      "aarch64-darwin": "macos_arm"
+    }
+  },
+  "signalhound-spike": {
+    "version": "4_0_16",
+    "url": "https://signalhound.com/sigdownloads/Spike/Spike(Ubuntu22.04x64)_4_0_16.zip",
+    "hash": "sha256-+Wx39z+W/pFdF0i2rpnKeoXNxWOPZNP6OVEeNdJK61k=",
+    "homepage": "https://signalhound.com/spike/",
+    "versionProbe": {
+      "type": "regex",
+      "url": "https://signalhound.com/spike/",
+      "pattern": "Spike\\(Ubuntu22\\.04x64\\)_[0-9_]+\\.zip",
+      "prefix": "Spike(Ubuntu22.04x64)_",
+      "suffix": ".zip"
+    },
+    "platformPaths": {
+      "x86_64-linux": "Spike(Ubuntu22.04x64)_4_0_16"
+    }
+  },
+  "signalhound-vsg60": {
+    "version": "2_0_3",
+    "url": "https://signalhound.com/sigdownloads/VSG60/VSG(Ubuntu22.04x64)_2_0_3.zip",
+    "hash": "sha256-0KeME74HOwTuGxUoK3voSqM71lKKSYhain0S+Mz1OWE=",
+    "homepage": "https://signalhound.com/products/vsg60a/",
+    "versionProbe": {
+      "type": "regex",
+      "url": "https://signalhound.com/support/product-downloads/vsg60a-downloads/",
+      "pattern": "VSG\\(Ubuntu22\\.04x64\\)_[0-9_]+\\.zip",
+      "prefix": "VSG(Ubuntu22.04x64)_",
+      "suffix": ".zip"
+    },
+    "platformPaths": {
+      "x86_64-linux": "VSG(Ubuntu22.04x64)_2_0_3"
+    }
+  },
+  "sastudio": {
+    "version": "4.4.55.48",
+    "tag": "v0.55.88",
+    "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.88/SAStudio4_4.4.55.48_amd64.zip",
+    "hash": "sha256-qdwuH6o1o0TpHQxtSJvWwC4ObAA9XN/i/ibSCScalYA=",
+    "homepage": "https://www.harogic.com/",
+    "versionProbe": {
+      "type": "regex",
+      "url": "https://api.github.com/repos/PentHertz/rfswift_harogic_install/releases/latest",
+      "pattern": "SAStudio4_[0-9.]+_amd64\\.zip",
+      "prefix": "SAStudio4_",
+      "suffix": "_amd64.zip"
+    },
+    "platformPaths": {
+      "x86_64-linux": "SAStudio4_4.4.55.48_amd64",
+      "aarch64-linux": "SAStudio4_4.4.55.48_arm64"
+    },
+    "artifacts": {
+      "x86_64-linux": {
+        "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.88/SAStudio4_4.4.55.48_amd64.zip",
+        "hash": "sha256-qdwuH6o1o0TpHQxtSJvWwC4ObAA9XN/i/ibSCScalYA="
+      },
+      "aarch64-linux": {
+        "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.88/SAStudio4_4.4.55.48_arm64.zip",
+        "hash": "sha256-zyOCiSWr0y/B7Bgiu+NzVA7LP1Z4v+hBaiuVwHrHYSg="
+      }
+    }
+  },
+  "sastudio-4_3_55_35": {
+    "version": "4.3.55.35",
+    "tag": "v0.55.64",
+    "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.64/SAStudio4_4.3.55.35_amd64.zip",
+    "hash": "sha256-+43+rrKXDTQ/FWNCfjkeg6f+ruVPuqLIt9ZEUJ+WKKM=",
+    "homepage": "https://www.harogic.com/",
+    "versionProbe": {
+      "type": "regex",
+      "url": "https://api.github.com/repos/PentHertz/rfswift_harogic_install/releases/latest",
+      "pattern": "SAStudio4_[0-9.]+_amd64\\.zip",
+      "prefix": "SAStudio4_",
+      "suffix": "_amd64.zip"
+    },
+    "platformPaths": {
+      "x86_64-linux": "SAStudio4_4.3.55.35_amd64",
+      "aarch64-linux": "SAStudio4_4.3.55.35_arm64"
+    },
+    "artifacts": {
+      "x86_64-linux": {
+        "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.64/SAStudio4_4.3.55.35_amd64.zip",
+        "hash": "sha256-+43+rrKXDTQ/FWNCfjkeg6f+ruVPuqLIt9ZEUJ+WKKM="
+      },
+      "aarch64-linux": {
+        "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.64/SAStudio4_4.3.55.35_arm64.zip",
+        "hash": "sha256-0JyAlQzsm3g8fkA+VrGVVvaTFDEL8wwjHrGJ8OQSau0="
+      }
+    }
+  },
+  "harogic-htra-sdk": {
+    "version": "0.55.88",
+    "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.88/Install_HTRA_SDK.zip",
+    "hash": "sha256-iqKvTbNw0WUlrNT4juyqUUgQfnRaGc7ADKu+J9tPs1k=",
+    "homepage": "https://www.harogic.com/",
+    "versionProbe": {
+      "type": "githubRelease",
+      "url": "https://api.github.com/repos/PentHertz/rfswift_harogic_install/releases/latest",
+      "pattern": "",
+      "prefix": "v",
+      "suffix": ""
+    },
+    "platformPaths": {
+      "x86_64-linux": "x86_64",
+      "aarch64-linux": "aarch64"
+    }
+  },
+  "harogic-htra-sdk-0_55_64": {
+    "version": "0.55.64",
+    "url": "https://github.com/PentHertz/rfswift_harogic_install/releases/download/v0.55.64/Install_HTRA_SDK.zip",
+    "hash": "sha256-rpJvNf9b9paLVmTlsf24GlCjekRJexYx4ygyyxUA7cY=",
+    "homepage": "https://www.harogic.com/",
+    "versionProbe": {
+      "type": "githubRelease",
+      "url": "https://api.github.com/repos/PentHertz/rfswift_harogic_install/releases/latest",
+      "pattern": "",
+      "prefix": "v",
+      "suffix": ""
+    },
+    "platformPaths": {
+      "x86_64-linux": "x86_64",
+      "aarch64-linux": "aarch64"
+    }
+  }
+}

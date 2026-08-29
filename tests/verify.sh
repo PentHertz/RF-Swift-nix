@@ -5,16 +5,20 @@ repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo"
 
 nix_cmd=(nix --extra-experimental-features "nix-command flakes")
+flake_ref=${RFSWIFT_TEST_FLAKE_REF:-.}
 system=${RFSWIFT_TEST_SYSTEM:-$("${nix_cmd[@]}" eval --raw --impure --expr builtins.currentSystem)}
 generated=$(mktemp)
 trap 'rm -f "$generated"' EXIT
 
-echo "[1/5] catalog.json is valid and generated from environments.nix"
+echo "[1/6] maintenance metadata and scripts are valid"
+./tests/maintenance.sh
+
+echo "[2/6] catalog.json is valid and generated from environments.nix"
 jq -e '.version and (.environments | type == "array" and length > 0)' catalog.json >/dev/null
 "${nix_cmd[@]}" eval --json --file ./gen-catalog.nix >"$generated"
 diff -u <(jq -S . catalog.json) <(jq -S . "$generated")
 
-echo "[2/5] prerequisite layers are valid and SDR profiles match image layering"
+echo "[3/6] prerequisite layers are valid and SDR profiles match image layering"
 jq -e '
   all(.environments[]; . as $e |
     (($e.prerequisites // []) | all(. as $p | ($e.packages | index($p)) != null))) and
@@ -23,7 +27,7 @@ jq -e '
   ((.environments[] | select(.name == "sdr_full") | .packages) | index("gnuradio-rfswift") != null)
 ' catalog.json >/dev/null
 
-echo "[3/5] every environment forces to an installable derivation on $system"
+echo "[4/6] every environment forces to an installable derivation on $system"
 # `mapfile` is bash 4+; read into the array portably so this also runs under the
 # bash 3.2 that ships on macOS.
 environments=()
@@ -31,16 +35,16 @@ while IFS= read -r line; do environments+=("$line"); done \
   < <(jq -r '.environments[].name' catalog.json)
 for environment in "${environments[@]}"; do
   printf '  %-16s' "$environment"
-  "${nix_cmd[@]}" eval --raw ".#packages.${system}.\"${environment}\".drvPath" >/dev/null
+  "${nix_cmd[@]}" eval --raw "${flake_ref}#packages.${system}.\"${environment}\".drvPath" >/dev/null
   echo ok
 done
 
-echo "[4/5] all exposed custom packages force to derivations on $system"
+echo "[5/6] all exposed custom packages force to derivations on $system"
 # Do this one derivation per Nix process. A monolithic `nix flake check` retains
 # the complete graph and can consume many GiB for this package set.
 custom_packages=()
 while IFS= read -r line; do custom_packages+=("$line"); done < <(
-  "${nix_cmd[@]}" eval --json ".#packages.${system}" --apply builtins.attrNames \
+  "${nix_cmd[@]}" eval --json "${flake_ref}#packages.${system}" --apply builtins.attrNames \
     | jq -r '.[] | select(startswith("pkg-"))'
 )
 # A custom package is expected to force everywhere it is *available*. Many are
@@ -61,17 +65,17 @@ force_or_skip() {
 }
 
 for package in "${custom_packages[@]}"; do
-  force_or_skip ".#packages.${system}.\"${package}\".drvPath" "$package"
+  force_or_skip "${flake_ref}#packages.${system}.\"${package}\".drvPath" "$package"
 done
 
 # Python 3.10-only custom tools are supplied by a separate nixpkgs pin, which
 # the generic overlay cannot carry. They must still be exposed by their catalog
 # names because `rfswift nix install` resolves through legacyPackages.
 for package in mirage bluing; do
-  force_or_skip ".#legacyPackages.${system}.\"${package}\".drvPath" "legacyPackages.${package}"
+  force_or_skip "${flake_ref}#legacyPackages.${system}.\"${package}\".drvPath" "legacyPackages.${package}"
 done
 
-echo "[5/5] RF Swift's embedded catalog matches, when a sibling checkout exists"
+echo "[6/6] RF Swift's embedded catalog matches, when a sibling checkout exists"
 embedded=../RF-Swift/go/rfswift/nix/catalog.json
 if [[ -f "$embedded" ]]; then
   diff -u <(jq -S . catalog.json) <(jq -S . "$embedded")

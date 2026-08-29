@@ -1,25 +1,20 @@
-# Tailcat: netcat over Tailscale's WireGuard/DERP data plane without the
-# Tailscale control plane or a Tailscale account.
-{ lib, buildGoModule, fetchFromGitHub }:
+# Tailcat also serves as the reference declarative package. More complicated
+# packages can continue to use regular derivations.
+{ lib, callPackage }:
 
-buildGoModule {
+(callPackage ./lib/mkGitHubTool.nix { }) {
   pname = "tailcat";
-  version = "0-unstable-2026-08-27";
-
-  src = fetchFromGitHub {
+  version = "0-unstable-2026-08-29";
+  build = "go";
+  source = {
     owner = "tailscale";
     repo = "tailcat";
-    rev = "c04c5afee401df40e620db8ae108e957ae07bcd9";
-    hash = "sha256-QqlGCmT/RRcAJKvwa+0nwYou8yp4kx3kAm1gIkljyGo=";
+    updateBranch = "main";
+    rev = "88929418b1a3f3c74904a3136d6a9e87b1b5b9bb";
+    hash = "sha256-+VTbYZN45gUAUq/KxidxzkDMLVUK4nVw9wqBARP+x9s=";
   };
-
   vendorHash = "sha256-3uVUHATnd2s+Axdq06/xAQ2IbzJZfP1yQ/nEopgckq0=";
   subPackages = [ "cmd/tailcat" ];
-
-  meta = {
-    description = "Netcat over Tailscale's data plane without its control plane";
-    homepage = "https://github.com/tailscale/tailcat";
-    license = lib.licenses.bsd3;
-    mainProgram = "tailcat";
-  };
+  description = "Netcat over Tailscale's data plane without its control plane";
+  license = "bsd3";
 }

@@ -110,15 +110,16 @@
           # Force drvPath under tryEval so one such package is reported absent
           # instead of making the entire environment impossible to evaluate.
           forced = if available then builtins.tryEval t.value.drvPath else { success = false; };
-        in if available && forced.success
-           then t.value
-           else null;
+        in
+        if available && forced.success
+        then t.value
+        else null;
 
       resolveEnv = system: env:
         let
           pkgs = pkgsFor system;
           custom = customFor system;
-          prerequisites = env.prerequisites or [];
+          prerequisites = env.prerequisites or [ ];
           declared = env.packages;
           resolved = assert lib.assertMsg
             (lib.all (name: builtins.elem name declared) prerequisites)
@@ -126,11 +127,12 @@
             map (name: { inherit name; drv = resolvePkg pkgs custom name; }) declared;
           present = builtins.filter (x: x.drv != null) resolved;
           absent = builtins.filter (x: x.drv == null) resolved;
-          note = lib.optionalString (absent != [])
+          note = lib.optionalString (absent != [ ])
             (builtins.trace
               "RF-Swift-nix: ${builtins.toString (builtins.length absent)} package(s) unavailable on ${system}: ${lib.concatMapStringsSep ", " (x: x.name) absent}"
               "");
-        in {
+        in
+        {
           drvs = map (x: x.drv) present;
           absent = map (x: x.name) absent;
           _note = note;
@@ -140,7 +142,8 @@
         let
           pkgs = pkgsFor system;
           r = resolveEnv system env;
-        in pkgs.mkShell {
+        in
+        pkgs.mkShell {
           name = "rfswift-${name}";
           buildInputs = r.drvs;
           shellHook = ''
@@ -158,7 +161,8 @@
         let
           pkgs = pkgsFor system;
           r = resolveEnv system env;
-        in pkgs.buildEnv {
+        in
+        pkgs.buildEnv {
           name = "rfswift-${name}";
           paths = r.drvs;
           ignoreCollisions = true;
@@ -170,9 +174,10 @@
         let
           pkgs = pkgsFor system;
           custom = customFor system;
-          names = env.prerequisites or [];
+          names = env.prerequisites or [ ];
           resolved = map (n: resolvePkg pkgs custom n) names;
-        in pkgs.buildEnv {
+        in
+        pkgs.buildEnv {
           name = "rfswift-${name}-prerequisites";
           paths = builtins.filter (p: p != null) resolved;
           ignoreCollisions = true;
@@ -191,9 +196,10 @@
       # so you can build one tool with `nix build .#pkg-readsb`.
       packages = forAllSystems (system:
         (lib.mapAttrs (name: env: mkEnvFor system name env) environments)
-        // (lib.mapAttrs' (name: env:
-          lib.nameValuePair "${name}-prerequisites" (mkPrereqFor system name env))
-          (lib.filterAttrs (_: env: (env.prerequisites or []) != []) environments))
+        // (lib.mapAttrs'
+          (name: env:
+            lib.nameValuePair "${name}-prerequisites" (mkPrereqFor system name env))
+          (lib.filterAttrs (_: env: (env.prerequisites or [ ]) != [ ]) environments))
         // (lib.mapAttrs' (n: v: lib.nameValuePair "pkg-${n}" v) (customFor system))
       );
 
@@ -216,11 +222,11 @@
             };
             overlays = [ self.overlays.default pyqtNoWebengineOverlay ];
           };
+          # The reusable overlay cannot carry the separate nixpkgs-py310 input.
+          # Merge customFor here so user-facing names such as `mirage` and
+          # `bluing` resolve for `rfswift nix install`, which installs from
+          # legacyPackages.<system>.<catalog-name>.
         in
-        # The reusable overlay cannot carry the separate nixpkgs-py310 input.
-        # Merge customFor here so user-facing names such as `mirage` and
-        # `bluing` resolve for `rfswift nix install`, which installs from
-        # legacyPackages.<system>.<catalog-name>.
         base // customFor system);
 
       # The raw catalog, exposed for tooling / `nix eval .#catalog`
@@ -236,6 +242,17 @@
               cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
               ${pkgs.nix}/bin/nix eval --json --file ./gen-catalog.nix > catalog.json
               echo "Wrote catalog.json"
+            '');
+          };
+
+          # Unified maintainer interface for a checkout:
+          # `nix run .#maintain -- check <package>`.
+          maintain = {
+            type = "app";
+            program = toString (pkgs.writeShellScript "rfswift-maintain" ''
+              export PATH=${lib.makeBinPath [ pkgs.bash pkgs.coreutils pkgs.curl pkgs.git pkgs.jq pkgs.ripgrep pkgs.gnused ]}:$PATH
+              export RFSWIFT_MAINTENANCE_ROOT="$PWD"
+              exec ${pkgs.bash}/bin/bash ${self}/scripts/package-maintenance.sh "$@"
             '');
           };
 

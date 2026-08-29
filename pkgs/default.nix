@@ -41,6 +41,10 @@ with pkgs;
   ## --- Network transport / tunnelling ----------------------------------
   tailcat = callPackage ./tailcat.nix { };
 
+  # New packages created by scripts/package-maintenance.sh are registered
+  # immediately above this marker.
+  ## PACKAGE-MAINTENANCE: INSERT BEFORE
+
   ## --- Hardware (PentHertz DSView .deb, opt-in) -------------------------
   dsview = libsForQt5.callPackage ./dsview.nix { };
   saleae-logic2 = callPackage ./saleae-logic2.nix { };
