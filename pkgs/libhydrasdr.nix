@@ -11,8 +11,8 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "hydrasdr";
     repo = "hydrasdr-host";
-    rev = "main";
-    hash = "sha256-oPA8ILKlv+KpSkuG6oi+swlrN1sjUs21BW+MjYgwets=";
+    rev = "d52f1fe695590fc4ab94ffdb0d13d9c07171a581";
+    hash = "sha256-1kG5jkzHLlpfwikvf6Qs9Uoxxy4t7sIFj7sMVZUgp0U=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];
