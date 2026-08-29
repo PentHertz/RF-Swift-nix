@@ -14,7 +14,15 @@
       systems = [ "x86_64-linux" "aarch64-linux" "riscv64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
       # The environment catalog (pure data): { <image> = { description; packages = [str]; ... }; }
-      environments = import ./environments.nix;
+      rawEnvironments = import ./environments.nix;
+
+      # Baseline developer tools available in every RF Swift environment.
+      # Keep these centralized so new environments inherit them automatically.
+      # Keep synchronized with gen-catalog.nix so CLI/GUI metadata matches.
+      commonPackages = [ "python3" "uv" "go" ];
+      environments = nixpkgs.lib.mapAttrs (_: env: env // {
+        packages = nixpkgs.lib.unique (commonPackages ++ env.packages);
+      }) rawEnvironments;
 
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
 
