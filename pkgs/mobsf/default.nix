@@ -34,6 +34,17 @@ let
           disabledTests = (old.disabledTests or [ ]) ++ [ "test_set_pdeathsig" ];
         });
 
+        # This test puts three results on multiprocessing.Queue and immediately
+        # asks monitor() to consume them. Queue's feeder thread is asynchronous,
+        # so loaded CI runners can observe an empty queue before it is flushed;
+        # the acknowledgement assertions then fail nondeterministically. Keep
+        # all other django-q2 tests, including its broker and scheduler tests.
+        "django-q2" = super."django-q2".overridePythonAttrs (old: {
+          disabledTests = (old.disabledTests or [ ]) ++ [
+            "test_acknowledge_failure_override"
+          ];
+        });
+
         mitmproxy-linux = self.buildPythonPackage {
           pname = "mitmproxy-linux";
           version = "0.12.8";
