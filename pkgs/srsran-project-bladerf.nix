@@ -1,5 +1,5 @@
 # srsran-project-bladerf: FlUxIuS's srsRAN Project (5G SA gNB) fork adapted to
-# drive a bladeRF — the telecom_5G_bladerf image's RAN. srsRAN Project only
+# drive a bladeRF - the telecom_5G_bladerf image's RAN. srsRAN Project only
 # speaks UHD, so the bladeRF reaches it through SoapyUHD's UHD-side bridge and
 # the matching SoapyBladeRF fork (soapybladerf-srsran); the fork's own change
 # is in the UHD radio device layer. Built like OCUDU (same code lineage): UHD +

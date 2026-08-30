@@ -71,7 +71,7 @@ The four deliberate, documented gaps are:
   whole meson/python native stack. `pkgs/angr.nix` keeps the ready derivation;
   angr returns when nixpkgs' angr supports pycparser 3.00 or the pin advances.
 
-“Zero explicit gaps” means the intended tools have package references. It does
+"Zero explicit gaps" means the intended tools have package references. It does
 not by itself prove behavioral parity with a Docker image. Hardware access,
 GUI/audio operation, radio firmware, and privileged network behavior require
 machine-in-the-loop tests.

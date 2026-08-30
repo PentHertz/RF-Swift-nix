@@ -1,4 +1,4 @@
-# ueransim_nullciph: FlUxIuS's "nullciph" branch of UERANSIM — a UE/gNB
+# ueransim_nullciph: FlUxIuS's "nullciph" branch of UERANSIM - a UE/gNB
 # simulator patched to negotiate null ciphering, built by the
 # telecom_4Gto5G_extended image for core-network training labs. Same recipe as
 # nixpkgs' ueransim, different source; the programs are installed with a

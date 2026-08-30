@@ -4,7 +4,7 @@
 # a package: we ship the .grc flowgraphs and sample IQ under share/ and expose
 # the two scripts as commands. They need the `meshtastic` protobufs,
 # cryptography and pyzmq, and GNU Radio's `pmt` module (the ZMQ messages they
-# exchange with the flowgraph are PMTs) — so they run on GNU Radio's own Python
+# exchange with the flowgraph are PMTs) - so they run on GNU Radio's own Python
 # with those packages added, and with GNU Radio's site-packages on the path.
 { lib, stdenvNoCC, fetchFromGitLab, gnuradio, makeWrapper }:
 

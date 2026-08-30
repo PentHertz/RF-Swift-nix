@@ -29,8 +29,8 @@
       # On macOS, python3Packages.pyqt6 pulls qtwebengine via its `withPdf`
       # default. qtwebengine is not cached for aarch64-darwin and its source
       # build segfaults (in patchShebangs over the Chromium tree), which makes
-      # every Qt-GUI Python tool — pyqtgraph, and therefore GNU Radio's
-      # gnuradio-companion — impossible to build on macOS. pyqtgraph/GNU Radio
+      # every Qt-GUI Python tool - pyqtgraph, and therefore GNU Radio's
+      # gnuradio-companion - impossible to build on macOS. pyqtgraph/GNU Radio
       # do not use QtPdf/QtWebEngine, so drop it on Darwin. Linux keeps the full
       # pyqt6 (qtwebengine is cached upstream there).
       pyqtNoWebengineOverlay = final: prev:
@@ -179,10 +179,14 @@
         let
           pkgs = pkgsFor system;
           r = resolveEnv system env;
+          # GUI tools built by nixpkgs only find GPU drivers on NixOS. Ship the
+          # Mesa runtime (pkgs/rfswift-gl.nix) in every Linux environment so the
+          # RF Swift engine can enable it on any other distribution.
+          glRuntime = lib.optional pkgs.stdenv.hostPlatform.isLinux (customFor system).rfswift-gl;
         in
         pkgs.buildEnv {
           name = "rfswift-${name}";
-          paths = r.drvs;
+          paths = r.drvs ++ glRuntime;
           ignoreCollisions = true;
         };
 

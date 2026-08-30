@@ -105,8 +105,8 @@ If RF Swift's custom closures exceed that allowance or older cached releases
 must remain permanently available, a paid Cachix plan or a self-hosted binary
 cache will be needed.
 
-Reaching a Cachix limit—whether a plan provides 5 GB, 50 GB, or another
-amount—does **not** stop Nix or crash compilation. Cachix evicts older paths;
+Reaching a Cachix limit - whether a plan provides 5 GB, 50 GB, or another
+amount - does **not** stop Nix or crash compilation. Cachix evicts older paths;
 the next consumer downloads an evicted path from another configured binary
 cache when possible, or rebuilds it from source. The practical effect is lower
 cache hit rate and longer CI/user builds. This is distinct from the temporary

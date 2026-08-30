@@ -38,15 +38,55 @@ with pkgs;
   libresdr-firmware = callPackage ./libresdr-firmware.nix { };
   ais-catcher = callPackage ./ais-catcher.nix { };
 
+  ## --- NanoVNA: ship a udev rule so `rfswift nix udev` covers it ----------
+  # NanoVNA presents as a USB CDC-ACM serial device and nanovna-saver ships no
+  # udev rule; add one (STM32 VCP 0483:5740, NanoVNA-H/H4 16c0:0483) so the
+  # device is reachable without root.
+  nanovna-saver = pkgs.nanovna-saver.overrideAttrs (o: {
+    postInstall = (o.postInstall or "") + ''
+      install -Dm444 /dev/stdin $out/lib/udev/rules.d/70-nanovna.rules <<'RULES'
+# NanoVNA - installed by RF Swift (nix engine)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="0483", MODE="0666", TAG+="uaccess"
+RULES
+    '';
+  });
+
+  ## --- openFPGALoader: ship its udev rules (Sipeed Tang, FTDI/JTAG, ...) ---
+  # nixpkgs builds openFPGALoader without installing its 99-openfpgaloader.rules,
+  # so `rfswift nix udev` had nothing for FPGA/JTAG boards (Sipeed Tang, Digilent,
+  # Lattice, FTDI programmers, ...). Install the file the source already ships.
+  openfpgaloader = pkgs.openfpgaloader.overrideAttrs (o: {
+    postInstall = (o.postInstall or "") + ''
+      install -Dm444 $src/99-openfpgaloader.rules \
+        $out/lib/udev/rules.d/99-openfpgaloader.rules
+    '';
+  });
+
+  ## --- Consolidated udev rules for devices whose package ships none ------
+  rfswift-udev-rules = callPackage ./rfswift-udev-rules.nix { };
+
   ## --- Network transport / tunnelling ----------------------------------
   tailcat = callPackage ./tailcat.nix { };
+  # Little Snitch for Linux (proprietary, from the images core build).
+  littlesnitch = callPackage ./littlesnitch.nix { };
+
+  ## --- OpenGL runtime for non-NixOS hosts (SDR++, gqrx, ... need it) -----
+  rfswift-gl = callPackage ./rfswift-gl.nix { };
+  # Impure on purpose: the NVIDIA user-space driver must match the host's
+  # kernel module. Built by the engine with --impure and RFSWIFT_NVIDIA_VERSION.
+  rfswift-gl-nvidia = callPackage ./rfswift-gl.nix {
+    withNvidia = true;
+    nvidiaVersion = let v = builtins.getEnv "RFSWIFT_NVIDIA_VERSION"; in if v == "" then null else v;
+    nvidiaHash = let h = builtins.getEnv "RFSWIFT_NVIDIA_HASH"; in if h == "" then null else h;
+  };
 
   # New packages created by scripts/package-maintenance.sh are registered
   # immediately above this marker.
   ## PACKAGE-MAINTENANCE: INSERT BEFORE
 
   ## --- Hardware (PentHertz DSView .deb, opt-in) -------------------------
-  dsview = libsForQt5.callPackage ./dsview.nix { };
+  dsview = callPackage ./dsview.nix { };
   saleae-logic2 = callPackage ./saleae-logic2.nix { };
   hydranfc-sniffer-decoder = callPackage ./hydranfc-decoder.nix { };
   kc908 = callPackage ./kc908.nix { };
@@ -146,6 +186,12 @@ with pkgs;
   gr-cessb = callPackage ./oot/gr-cessb.nix { };
   gr-hydrasdr = callPackage ./oot/gr-hydrasdr.nix { inherit libhydrasdr; };
   gr-bladeRF = callPackage ./oot/gr-bladeRF.nix { inherit gr-osmosdr-penthertz; };
+  # Dedicated vendor-hardware OOT source blocks (Harogic, Signal Hound), linking
+  # the proprietary SDKs already packaged under vendor/. Each is platform-gated
+  # in its own file so the gnuradio-rfswift bundle drops it where the SDK does
+  # not exist rather than failing to evaluate.
+  gr-htra = callPackage ./oot/gr-htra.nix { inherit (vendor) harogic-htra-sdk; };
+  gr-signal-hound = callPackage ./oot/gr-signal-hound.nix { inherit (vendor) signalhound-sdk; };
 
   # Source deps not in nixpkgs, needed by a few OOT modules.
   itpp = callPackage ./itpp.nix { };
@@ -164,7 +210,8 @@ with pkgs;
       gr-nordic gr-pdu_utils gr-timing_utils gr-sandia_utils gr-fhss_utils
       gr-zwave_poore gr-mixalot gr-reveng gr-j2497 gr-m17
       gr-grnet gr-aoa gr-correctiq gr-dsd gr-nrsc5 gr-ntsc-rc gr-mer gr-flarm
-      gr-guiextra gr-rftap gr-radio_astro gr-cessb gr-hydrasdr gr-bladeRF gr-funcube;
+      gr-guiextra gr-rftap gr-radio_astro gr-cessb gr-hydrasdr gr-bladeRF gr-funcube
+      gr-htra gr-signal-hound;
   };
   gnuradio-rfswift-light = callPackage ./gnuradio-rfswift-light.nix {
     inherit gr-osmosdr-penthertz gr-hydrasdr gr-bladeRF gr-funcube;
@@ -173,10 +220,62 @@ with pkgs;
   ## --- PentHertz / HydraSDR forks (compiled from source) ----------------
   # RF Swift ships forks of these upstreams; we build them by overriding the
   # nixpkgs derivation's source, so we inherit its build recipe and deps.
-  gr-osmosdr-penthertz = callPackage ./gr-osmosdr-penthertz.nix { inherit libhydrasdr; };
+  gr-osmosdr-penthertz = callPackage ./gr-osmosdr-penthertz.nix { inherit libhydrasdr soapysdr-with-plugins; };
   inspectrum-hydrasdr = callPackage ./inspectrum-hydrasdr.nix { };
-  sdrpp-hydrasdr = callPackage ./sdrpp-hydrasdr.nix { inherit libhydrasdr; };
-  luaradio-hydrasdr = callPackage ./luaradio-hydrasdr.nix { };
+  # SDR++ with every device source RF Swift's images ship: the HydraSDR fork's
+  # own modules plus Harogic, SignalHound BB60 and KC908, each enabled only on
+  # the architectures its library exists for (see the file); RFNM comes in
+  # through the Soapy source.
+  sdrpp-hydrasdr = callPackage ./sdrpp-hydrasdr.nix {
+    inherit libhydrasdr soapysdr-with-plugins;
+    inherit (vendor) signalhound-sdk harogic-htra-sdk kc908-sdk;
+  };
+  luaradio-hydrasdr = callPackage ./luaradio-hydrasdr.nix {
+    inherit libhydrasdr soapysdr-with-plugins;
+    rtl-sdr = pkgs.rtl-sdr-osmocom;
+  };
+
+  ## --- Everyday SDR apps rebuilt on RF Swift's device layer -----------------
+  # nixpkgs builds these against its own SoapySDR plugin set (rtlsdr, hackrf,
+  # airspy, bladeRF, LimeSDR, PlutoSDR, USRP, remote, audio). Rebuilding them
+  # on RF Swift's soapysdr-with-plugins adds HydraSDR, RFNM, XTRX, LiteX M2SDR
+  # and uSDR to every one of them, with no environment variable involved:
+  # each tool finds the modules through the libSoapySDR it links.
+  #   * gqrx drives devices through gr-osmosdr, so it gets the PentHertz
+  #     gr-osmosdr (native HydraSDR + that Soapy set). nixpkgs builds it on
+  #     gnuradioMinimal; hand it the full gnuradio the fork is built against,
+  #     with the fork substituted for nixpkgs' osmosdr in that package set.
+  #   * SigDigger reaches devices through suscan, which links SoapySDR.
+  #   * SatDump has native rtlsdr/hackrf/airspy/airspyhf/plutosdr/bladeRF
+  #     plugins in nixpkgs; its LimeSDR, USRP and SoapySDR plugins are only
+  #     built when the libraries are present at configure time, so add them.
+  #   * rtl_433 links SoapySDR next to librtlsdr; hydrasdr433 (its HydraSDR
+  #     fork, pkgs/hydrasdr433.nix) covers HydraSDR natively.
+  #   * inspectrum analyses files only and needs no device layer; URH (urh-ng
+  #     above) compiles its native backends against the same device libraries.
+  gqrx = pkgs.gqrx.override {
+    gnuradioMinimal = pkgs.gnuradio // {
+      pkgs = pkgs.gnuradio.pkgs // { osmosdr = gr-osmosdr-penthertz; };
+    };
+  };
+  sigdigger = pkgs.sigdigger.override {
+    inherit soapysdr-with-plugins;
+    suscan = pkgs.suscan.override { inherit soapysdr-with-plugins; };
+  };
+  rtl_433 = pkgs.rtl_433.override { inherit soapysdr-with-plugins; };
+  satdump = pkgs.satdump.overrideAttrs (old: {
+    buildInputs = (old.buildInputs or [ ]) ++ [ limesuite uhd boost soapysdr-with-plugins ];
+    # Fail the build, not the user's session, if one of the extra plugins
+    # silently stops being configured.
+    doInstallCheck = true;
+    installCheckPhase = ''
+      runHook preInstallCheck
+      for p in limesdr_sdr_support usrp_sdr_support soapy_sdr_support; do
+        test -e "$out/lib/satdump/plugins/$p.so" || { echo "satdump: $p not built" >&2; exit 1; }
+      done
+      runHook postInstallCheck
+    '';
+  });
   hydrasdr433 = callPackage ./hydrasdr433.nix { inherit libhydrasdr; };
   kalibrate-hydrasdr = callPackage ./kalibrate-hydrasdr.nix { inherit libhydrasdr; };
 
@@ -275,6 +374,7 @@ with pkgs;
   modmobmap = callPackage ./modmobmap.nix { };
   scat = callPackage ./sec/scat.nix { };
   sigploit = callPackage ./sec/sigploit.nix { inherit pysctp; };
+  jss7 = callPackage ./sec/jss7.nix { };
   osmo-trx = callPackage ./osmo-trx.nix { };
   ocudu = callPackage ./ocudu.nix { };
   mmt-dpi = callPackage ./mmt-dpi.nix { };
@@ -327,6 +427,9 @@ with pkgs;
   dragondrain-and-time = callPackage ./sec/dragondrain.nix { };
   dragonforce = callPackage ./sec/dragonforce.nix { };
   fluxion = callPackage ./sec/fluxion.nix { };
+  # BeEF: Ruby/bundler app (gem closure from bundlerEnv, gemset.nix pinned in
+  # pkgs/beef/). Runs as a service behind rogue-AP setups in the wifi env.
+  beef = callPackage ./beef { };
   fern-wifi-cracker = callPackage ./sec/fern-wifi-cracker.nix { reaver = pkgs.reaverwps-t6x; };
   wacker = callPackage ./sec/wacker.nix { };
   wifipumpkin3 = callPackage ./sec/wifipumpkin3.nix { };
@@ -362,6 +465,29 @@ with pkgs;
   blueducky = callPackage ./sec/blueducky.nix { };
   bluesploit = callPackage ./sec/bluesploit.nix { };
   whisperpair = callPackage ./sec/whisperpair.nix { };
+  breaktooth = callPackage ./sec/breaktooth.nix { };
+  blerp = callPackage ./sec/blerp.nix { };
+
+  ## --- Network image tools not in nixpkgs (source builds) --------------------
+  nmapautomator = callPackage ./sec/nmapautomator.nix { };
+  subenum = callPackage ./sec/subenum.nix { };
+  webcopilot = callPackage ./sec/webcopilot.nix { };
+  mbtget = callPackage ./sec/mbtget.nix { };
+  snitch = callPackage ./sec/snitch.nix { };
+  whosthere = callPackage ./sec/whosthere.nix { };
+  brutus = callPackage ./sec/brutus.nix { };
+  nerva = callPackage ./sec/nerva.nix { buildGoModule = buildGo127Module; };
+  mic = callPackage ./sec/mic.nix { };
+  betterleaks = callPackage ./sec/betterleaks.nix { };
+  titus = callPackage ./sec/titus.nix { buildGoModule = buildGo127Module; };
+  vortix = callPackage ./sec/vortix.nix { };
+  netwatch-tui = callPackage ./sec/netwatch-tui.nix { };
+  voipire = callPackage ./sec/voipire.nix { };
+  above = callPackage ./sec/above.nix { };
+  argus-recon = callPackage ./sec/argus-recon.nix { };
+  crypto-condor = callPackage ./sec/crypto-condor.nix { };
+  hexhttp = callPackage ./sec/hexhttp.nix { };
+  wiretapper = callPackage ./sec/wiretapper.nix { };
 
   # Universal Radio Hacker, PentHertz "urh-ng" fork. Compiled from source, with
   # the HydraSDR / Harogic / SignalHound device libraries so its extra native

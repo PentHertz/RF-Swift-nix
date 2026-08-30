@@ -11,20 +11,27 @@
 , gr-nordic, gr-pdu_utils, gr-timing_utils, gr-sandia_utils, gr-fhss_utils
 , gr-zwave_poore, gr-mixalot, gr-reveng, gr-j2497, gr-m17
 , gr-grnet, gr-aoa, gr-correctiq, gr-dsd, gr-nrsc5, gr-ntsc-rc, gr-mer, gr-flarm
-, gr-guiextra, gr-rftap, gr-radio_astro, gr-cessb, gr-hydrasdr, gr-bladeRF, gr-funcube }:
+, gr-guiextra, gr-rftap, gr-radio_astro, gr-cessb, gr-hydrasdr, gr-bladeRF, gr-funcube
+, gr-htra, gr-signal-hound }:
 
 let
   # The full OOT bundle. Some modules are Linux-only in nixpkgs (e.g. gr-difi);
   # on Darwin those throw "not available on hostPlatform", which would make the
   # whole GNU Radio derivation impossible to evaluate and break the SDR
-  # environment on macOS. Keep only modules available on the host — the same
-  # policy the flake's resolvePkg applies per environment — so gnuradio-companion
+  # environment on macOS. Keep only modules available on the host - the same
+  # policy the flake's resolvePkg applies per environment - so gnuradio-companion
   # still works on macOS with the modules that do build there.
   wanted = [
     gr-osmosdr-penthertz
     gr-hydrasdr
     gr-bladeRF
     gr-funcube
+    # Dedicated vendor-hardware source blocks. availableForHost below drops
+    # each where its proprietary SDK is not built (gr-htra is x86_64-linux
+    # only; gr-signal-hound is Linux only), so the bundle still evaluates on
+    # macOS and aarch64.
+    gr-htra
+    gr-signal-hound
     gnuradioPackages.lora_sdr
     gnuradioPackages.gr-difi
     gnuradioPackages.fosphor

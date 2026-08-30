@@ -138,5 +138,21 @@
       "x86_64-linux": "x86_64",
       "aarch64-linux": "aarch64"
     }
+  },
+  "kc908-sdk": {
+    "version": "24.4.06",
+    "url": "https://github.com/PentHertz/rfswift_deepace_install/releases/download/nightly/KC908-GNURadio24.4.06.zip",
+    "hash": "sha256-aPDy7SKMDW5b9f+y5Jfgvx/Sh4uVfKsrwkNqYybfue4=",
+    "homepage": "https://www.deepace.net/",
+    "versionProbe": {
+      "type": "regex",
+      "url": "https://api.github.com/repos/PentHertz/rfswift_deepace_install/releases",
+      "pattern": "KC908-GNURadio[0-9.]+\\.zip",
+      "prefix": "KC908-GNURadio",
+      "suffix": ".zip"
+    },
+    "platformPaths": {
+      "x86_64-linux": "KC908-GNURadio/lib"
+    }
   }
 }

@@ -1,7 +1,6 @@
 # litex-m2sdr: host software for the LiteX M2SDR (FlUxIuS fork of enjoy-digital's
 # litex_m2sdr): the userspace tools (m2sdr_util, m2sdr_rf, m2sdr_play/record,
-# ...) from software/user and the SoapySDR module from software/soapysdr —
-# what the sdrsa_devices image's litexm2sdr_devices_install builds with
+# ...) from software/user and the SoapySDR module from software/soapysdr - # what the sdrsa_devices image's litexm2sdr_devices_install builds with
 # build.py, minus the LitePCIe kernel module (a host-side driver, not a Nix
 # concern; the tools and module compile against its header only). Linux-only:
 # the LitePCIe interface is a Linux character device.

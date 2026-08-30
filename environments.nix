@@ -24,6 +24,7 @@
     category = "SDR";
     prerequisites = [
       "soapysdr-with-plugins"
+      "rfswift-udev-rules"
       "soapyplutosdr"
       "soapyremote"
       "soapyuhd"
@@ -49,6 +50,7 @@
       "usdr-lib"
     ];
     packages = [
+      "rfswift-udev-rules"
       # SoapySDR + all its device plugins (rtlsdr, hackrf, uhd, airspy, bladerf, lime, plutosdr, remote, ...)
       "soapysdr-with-plugins"
       "soapyplutosdr"
@@ -110,6 +112,7 @@
       "xnec2c"
       "jupyter"
       "kc908"
+      "kc908-sdk"
       "signalhound-spike"
       "signalhound-vsg60"
       "sastudio"
@@ -140,6 +143,7 @@
     category = "SDR";
     prerequisites = [
       "soapysdr-with-plugins"
+      "rfswift-udev-rules"
       "soapyplutosdr"
       "soapyremote"
       "soapyuhd"
@@ -166,6 +170,7 @@
     ];
     packages = [
       "soapysdr-with-plugins"
+      "rfswift-udev-rules"
       "soapyplutosdr"
       "soapyremote"
       "soapyuhd"
@@ -246,6 +251,7 @@
       "signalhound-vsg60"
       "sastudio"
       "kc908"
+      "kc908-sdk"
     ];
     # The full GNU Radio OOT set RF Swift ships (RF-Swift-images
     # scripts/gr_oot_modules.sh) is bundled into gnuradio-rfswift and appears in
@@ -309,6 +315,7 @@
     category = "SDR";
     prerequisites = [
       "soapysdr-with-plugins"
+      "rfswift-udev-rules"
       "hackrf"
       "rtl-sdr-osmocom"
       "airspy"
@@ -340,8 +347,9 @@
   rfid = {
     description = "RFID / NFC toolkit: Proxmark3 (Iceman), libnfc, MIFARE crackers and NFC utilities.";
     category = "RFID";
-    prerequisites = [ "libnfc" "libfreefare" "pcsclite" "ccid" ];
+    prerequisites = [ "libnfc" "libfreefare" "pcsclite" "ccid" "rfswift-udev-rules" ];
     packages = [
+      "rfswift-udev-rules"
       "libnfc"
       "libfreefare"
       "pcsclite"
@@ -415,9 +423,7 @@
       "dragondrain-and-time"
       "pyrit"
     ];
-    missing = [
-      "BeEF (Ruby/bundler browser-exploitation framework; run as a service rather than a CLI)"
-    ];
+    missing = [ ];
   };
 
   ######################################################################
@@ -426,8 +432,9 @@
   bluetooth = {
     description = "Bluetooth Classic + BLE: BlueZ stack, Ubertooth, and Python BLE tooling, on the SDR device layer.";
     category = "Bluetooth";
-    prerequisites = [ "bluez" "libbtbb" "ubertooth" "hackrf" "rtl-sdr-osmocom" ];
+    prerequisites = [ "bluez" "libbtbb" "ubertooth" "hackrf" "rtl-sdr-osmocom" "rfswift-udev-rules" ];
     packages = [
+      "rfswift-udev-rules"
       "bluez"
       "bluez-tools"
       "ubertooth"
@@ -452,10 +459,14 @@
       "whisperpair"
       "nordic-nrf-sniffer"
       "esp32-bt-classic-sniffer"
+      # Breaktooth: BR/EDR power-saving session hijack + HID injection. Python
+      # PoC (PyBluez/dbus/gi) plus a Go BD_ADDR helper, built from source.
+      "breaktooth"
+      # BLERP: BLE re-pairing attacks PoC. Ships the pinned nRF firmware; its
+      # `blerp-mitm` launcher builds the custom-Scapy-fork venv with uv.
+      "blerp"
     ];
-    missing = [
-      "breaktooth / blerp (BreakTooth ships its own bundled tooling; blerp needs a custom Scapy fork plus device firmware)"
-    ];
+    missing = [ ];
   };
 
   ######################################################################
@@ -483,6 +494,10 @@
       "crunch"
       "sngrep"
       "burpsuite"
+      # BeEF, the Browser Exploitation Framework: hooks and drives browsers it
+      # reaches over the network. Runs as a service (its `beef` launcher starts
+      # the hook server and web UI), not a one-shot CLI.
+      "beef"
       # Web / recon / scanning
       "whatweb"
       "wafw00f"
@@ -568,6 +583,36 @@
       "sippts"
       "hetty"
       "sslyze"
+      # Tools the general_network image ships that were previously missing.
+      # From nixpkgs:
+      "arping"
+      "inetutils"       # provides telnet
+      "lighttpd"
+      "kea"             # DHCP server (ISC successor to isc-dhcp-server)
+      # Built from source (pkgs/sec/, not in nixpkgs):
+      "hexhttp"         # HExHTTP
+      "argus-recon"     # argus
+      "above"
+      "crypto-condor"
+      "wiretapper"
+      "voipire"
+      "vortix"
+      "netwatch-tui"
+      "snitch"
+      "whosthere"
+      "brutus"
+      "nerva"
+      "mic"
+      "betterleaks"
+      "titus"
+      "nmapautomator"
+      "subenum"
+      "webcopilot"
+      "mbtget"
+      # Little Snitch for Linux (proprietary; the images ship it in the core
+      # build). Per-application network monitor/firewall; the daemon needs
+      # CAP_BPF/CAP_SYS_ADMIN/CAP_DAC_READ_SEARCH/CAP_PERFMON and root at runtime.
+      "littlesnitch"
     ];
     missing = [ ];
   };
@@ -624,24 +669,21 @@
       "ollydbg"
       "pwndbg"
       "dsview"
+      "angr"
     ];
     # Ghidra itself is present (stable `ghidra`); ghidra-latest is a packaged
     # opt-in (pkg-ghidra-latest) for the newest upstream release, not a gap.
     # The Windows debuggers x64dbg and OllyDBG are shipped Wine-wrapped; pwndbg
     # comes from its official self-contained .deb.
     #
-    # angr is a documented gap for this nixpkgs pin: the snapshot ships angr
-    # 9.2.193 alongside pycparser 3.00, a major rewrite that removed the PLY
-    # parser angr's C-type engine depends on (writable clex.filename, self.cparser,
-    # a `parameter_declaration` start symbol), so `import angr` fails outright.
-    # The only correct fix is to pin pycparser to 2.x for the environment, but
-    # doing so overrides the python package set and busts the binary-cache hits of
-    # the whole meson/python-built native stack (gtk4, wine, gdk-pixbuf, pipewire,
-    # ...), forcing tens of GiB of from-source rebuilds. pkgs/angr.nix keeps the
-    # correct derivation (setuptools-rust, sibling-pin relax, msgspec) so angr
-    # returns for free once nixpkgs' angr supports pycparser 3.00 or the flake pin
-    # advances; until then it is listed here rather than shipped broken.
-    missing = [ "angr" ];
+    # angr: this nixpkgs pin ships angr 9.2.193 alongside pycparser 3.00, a
+    # rewrite that removed the PLY parser angr's C-type engine drives, so a
+    # stock `import angr` fails. pkgs/angr.nix builds angr against a python whose
+    # pycparser is pinned back to 2.x, scoped via packageOverrides so only angr's
+    # own closure (cffi and dependents) rebuilds - the global python set and the
+    # meson/python native stack keep their binary-cache hits. angr's runtime
+    # PYTHONPATH (requiredPythonModules) then carries pycparser 2.22 only.
+    missing = [ ];
   };
 
   ######################################################################
@@ -650,8 +692,9 @@
   hardware = {
     description = "Hardware hacking: avrdude, sigrok/PulseView, OpenOCD, flashrom, openFPGALoader, esptool, dfu-util.";
     category = "Hardware";
-    prerequisites = [ "libsigrok" "libsigrokdecode" "hidapi" ];
+    prerequisites = [ "libsigrok" "libsigrokdecode" "hidapi" "rfswift-udev-rules" ];
     packages = [
+      "rfswift-udev-rules"
       "libsigrok"
       "libsigrokdecode"
       "hidapi"
@@ -846,6 +889,7 @@
       "modmobmap"
       "scat"
       "sigploit"
+      "jss7"
       "5greplay"
       "yatebts"
       "openbts"
@@ -873,7 +917,6 @@
     # Open5GS core + UERANSIM). SIM/crypto: pysim, sysmo-usim-tool, CryptoMobile,
     # pycrate, pysctp, SCAT, modmobmap.
     missing = [
-      "jss7 (Java SS7 stack, 17-module Maven build; its dependency closure can't be fetched inside the Nix sandbox)"
       "Burp Suite (telecom_4Gto5G_extended; available in the network environment)"
     ];
   };
@@ -908,6 +951,7 @@
       "sysmo-usim-tool"
       "scat"
       "sigploit"
+      "jss7"
       "modmobmap"
       "bromelia"
       "py5sig"
@@ -918,8 +962,6 @@
       "nmap"
       "jupyter"
     ];
-    missing = [
-      "jss7 (Java SS7 stack, 17-module Maven build; its dependency closure can't be fetched inside the Nix sandbox)"
-    ];
+    missing = [ ];
   };
 }

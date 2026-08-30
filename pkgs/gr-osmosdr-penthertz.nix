@@ -1,8 +1,10 @@
-# gr-osmosdr, PentHertz "resolute" fork. Built by overriding the nixpkgs
-# gnuradio OOT so we keep its GNU Radio build recipe and just swap the source.
-{ lib, fetchFromGitHub, gnuradioPackages, libhydrasdr }:
+# gr-osmosdr, PentHertz "resolute" fork: adds a native HydraSDR RFOne backend.
+# Built against RF Swift's soapysdr-with-plugins (pkgs/default.nix) so its
+# Soapy backend also reaches RFNM, XTRX, LiteX M2SDR and uSDR; gqrx and every
+# GNU Radio flowgraph using osmosdr blocks inherit both.
+{ lib, fetchFromGitHub, gnuradioPackages, libhydrasdr, soapysdr-with-plugins }:
 
-gnuradioPackages.osmosdr.overrideAttrs (old: {
+(gnuradioPackages.osmosdr.override { inherit soapysdr-with-plugins; }).overrideAttrs (old: {
   pname = "gr-osmosdr-penthertz";
   version = "unstable-penthertz";
   src = fetchFromGitHub {

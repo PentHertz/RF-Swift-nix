@@ -1,11 +1,10 @@
 # Open5GS training variants: FlUxIuS's patched branches of Open5GS 2.7.5 that
-# the telecom_4Gto5G_extended image builds next to stock Open5GS —
-#   nohttp2: SBI over HTTP/1.1 only (no HTTP/2), for interception/fuzzing labs;
+# the telecom_4Gto5G_extended image builds next to stock Open5GS - #   nohttp2: SBI over HTTP/1.1 only (no HTTP/2), for interception/fuzzing labs;
 #   0caps:   accepts UEs advertising zero security capabilities.
 # Same recipe as nixpkgs' open5gs (whose vendored subproject sources we reuse),
 # different source. Every installed program is prefixed with the variant name
 # (Open5GS_nohttp2-amfd, ...) so a variant coexists with stock open5gs on one
-# PATH, and the all-in-one 5G core runner (tests/app/5gc — what the image links
+# PATH, and the all-in-one 5G core runner (tests/app/5gc - what the image links
 # as Open5Gs_*_deployall) is installed as the variant's main command.
 { lib, stdenv, fetchFromGitHub, open5gs, variant, rev, hash, description }:
 

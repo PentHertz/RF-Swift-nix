@@ -27,7 +27,7 @@ stdenv.mkDerivation {
   # braced-init-list when T is given explicitly. Route it through a named
   # C-array so N deduces from a real array type (which every gcc accepts), and
   # seed it with the baseline feature of each architecture (SSE4.1 on x86_64,
-  # NEON on aarch64 — the header's own enum is per-arch) so it is never empty.
+  # NEON on aarch64 - the header's own enum is per-arch) so it is never empty.
   postPatch = ''
     f=include/ocudu/support/cpu_features.h
     perl -0777 -i -pe 's/constexpr auto cpu_features_included = to_array<cpu_feature>\(\{/static constexpr cpu_feature cpu_features_included_arr[] = {\n#ifdef __x86_64__\n    cpu_feature::sse4_1,\n#endif\n#ifdef __aarch64__\n    cpu_feature::neon,\n#endif/' "$f"

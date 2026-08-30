@@ -1,4 +1,4 @@
-# bromelia: Python Diameter (RFC 6733) protocol stack — the base the telecom
+# bromelia: Python Diameter (RFC 6733) protocol stack - the base the telecom
 # image's pyhss/bromelia steps pip-install (both install exactly this package).
 # Pure Python from PyPI; only depends on PyYAML.
 { lib, python3Packages, fetchPypi }:

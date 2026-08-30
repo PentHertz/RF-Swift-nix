@@ -14,8 +14,8 @@ let
   # cargo vendor + the Rust toolchain blow this sandbox's disk quota. Upstream
   # ships the Rust core (mitmproxy_rs, cp312 abi3) and the Linux redirector
   # (mitmproxy_linux, py3 manylinux) as prebuilt wheels. Override them across the
-  # whole python312 set via packageOverrides so every reference — mitmproxy and
-  # anything transitively pulling it — resolves to the wheels, with no source
+  # whole python312 set via packageOverrides so every reference - mitmproxy and
+  # anything transitively pulling it - resolves to the wheels, with no source
   # Rust build anywhere in the closure.
   py = python312.override (old: {
     self = py;
@@ -203,7 +203,7 @@ let
 
   # nixpkgs' lief is source-built (a 900+ object C++ compile). MobSF only needs
   # the `lief` python module, so use the upstream cp312 manylinux wheel and
-  # autopatch it — far cheaper and avoids the from-source build entirely.
+  # autopatch it - far cheaper and avoids the from-source build entirely.
   lief = pyp.buildPythonPackage {
     pname = "lief";
     version = "0.17.6";

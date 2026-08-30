@@ -24,7 +24,7 @@ gnuradioPackages.mkDerivation {
   '';
 
   # The GRC block YAMLs are generated at build time by grc/gen_bladerf_blocks.py,
-  # which renders its templates with Mako — so Mako must be present to configure.
+  # which renders its templates with Mako - so Mako must be present to configure.
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 python3Packages.mako ];
   # gnuradio's block.h includes <gmpxx.h> on Linux and <mpirxx.h> on Darwin.
   buildInputs = [ boost spdlog volk libbladeRF gr-osmosdr-penthertz python3Packages.numpy ]

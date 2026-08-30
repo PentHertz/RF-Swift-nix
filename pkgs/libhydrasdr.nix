@@ -18,8 +18,18 @@ stdenv.mkDerivation {
   nativeBuildInputs = [ cmake pkg-config ];
   buildInputs = [ libusb1 ];
 
-  # Older cmake_minimum_required guard for CMake 4.
+  # Older cmake_minimum_required guard for CMake 4. Keep the CMake udev-rules
+  # install OFF (it targets an absolute system path and is Linux-only, which is
+  # why it was disabled to keep the macOS build working); instead install the
+  # repo's own rules file into the output on Linux, so `rfswift nix udev` covers
+  # HydraSDR (VID 38af, legacy 1d50:60a1, and DFU 1fc9:000c) without breaking
+  # Darwin.
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" "-DINSTALL_UDEV_RULES=OFF" ];
+
+  postInstall = lib.optionalString stdenv.hostPlatform.isLinux ''
+    install -Dm444 ../hydrasdr-tools/51-hydrasdr.rules \
+      $out/lib/udev/rules.d/51-hydrasdr.rules
+  '';
 
   meta = {
     description = "HydraSDR RFOne device library";

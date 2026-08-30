@@ -12,7 +12,9 @@ let
     makeWrapper unzip
     libusb1 fftwFloat libftdi1 qt5 xcb-util-cursor libglvnd fontconfig freetype
     dbus zlib;
-  inherit (pkgs.xorg) libX11 libxcb libXext libXrender;
+  # The xorg.* attribute set is deprecated in nixpkgs; the libraries live at
+  # the top level now (evaluating the old names prints a warning).
+  inherit (pkgs) libx11 libxcb libxext libxrender;
   mkVendorBinary = pkgs.callPackage ./mkVendorBinary.nix { };
   ccLib = stdenv.cc.cc.lib;
   sources = builtins.fromJSON (builtins.readFile ./sources.json);
@@ -27,6 +29,7 @@ let
     sastudioSource_4_3_55_35.artifacts.${stdenv.hostPlatform.system}
       or sastudioSource_4_3_55_35.artifacts."x86_64-linux";
   htraSource = sources."harogic-htra-sdk";
+  kcSource = sources."kc908-sdk";
   htraSource_0_55_64 = sources."harogic-htra-sdk-0_55_64";
   mkHarogicHtraSdk = source: mkVendorBinary {
     pname = "harogic-htra-sdk";
@@ -81,7 +84,7 @@ rec {
       ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ]
       ++ lib.optionals stdenv.hostPlatform.isDarwin [ fixDarwinDylibNames ];
     # The macOS dylibs link libusb too (their only non-system dependency), so it
-    # must be in the closure on Darwin as well — see the install_name_tool rewrite
+    # must be in the closure on Darwin as well - see the install_name_tool rewrite
     # below.
     buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ libusb1 libftdi1 ccLib ]
       ++ lib.optionals stdenv.hostPlatform.isDarwin [ libusb1 ];
@@ -247,10 +250,10 @@ rec {
       freetype
       dbus
       zlib
-      libX11
+      libx11
       libxcb
-      libXext
-      libXrender
+      libxext
+      libxrender
     ];
     autoPatchelfIgnoreMissingDeps = true;
     dontWrapQtApps = true;
@@ -300,4 +303,48 @@ rec {
   harogic-htra-sdk-0_55_64 = mkHarogicHtraSdk htraSource_0_55_64;
   harogic-htra-sdk-0_55_88 = mkHarogicHtraSdk htraSource;
   harogic-htra-sdk = harogic-htra-sdk-0_55_88;
+
+  # Deepace KC908 host libraries, from the PentHertz mirror RF Swift's images
+  # use (RF-Swift-images/scripts/sa_devices.sh, kc908_sa_device): the FTDI
+  # D3XX USB 3 library the SDR++ kcsdr_source module drives the radio through,
+  # Deepace's libkcsdr + kcsdr.h (what gr-kc_sdr builds against) and the FTDI
+  # udev rule, which `rfswift nix udev` installs on the host. The mirror only
+  # ships x86_64 binaries, so the module is x86_64-linux only.
+  kc908-sdk = stdenv.mkDerivation {
+    pname = "kc908-sdk";
+    version = kcSource.version;
+    src = fetchurl {
+      inherit (kcSource) url hash;
+    };
+    nativeBuildInputs = [ unzip autoPatchelfHook ];
+    buildInputs = [ libusb1 ccLib ];
+    dontBuild = true;
+    # The zip also carries a GNU Radio OOT module tree; only lib/ is needed.
+    unpackPhase = ''
+      runHook preUnpack
+      unzip -q -o "$src" 'KC908-GNURadio/lib/*' -d src
+      runHook postUnpack
+    '';
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/lib/udev/rules.d $out/include
+      lib=src/KC908-GNURadio/lib
+      install -m644 $lib/linux/libftd3xx.so $out/lib/libftd3xx.so
+      # libftd3xx.so carries no SONAME; provide the versioned name FTDI's own
+      # package installs so anything looking for it resolves too.
+      ln -s libftd3xx.so $out/lib/libftd3xx.so.0.5.21
+      install -m644 $lib/linux/ftd3xx.h $out/include/ftd3xx.h
+      install -m644 $lib/libkcsdr.so $out/lib/libkcsdr.so
+      install -m644 $lib/kcsdr.h $out/include/kcsdr.h
+      install -m644 $lib/linux/51-ftd3xx.rules $out/lib/udev/rules.d/51-ftd3xx.rules
+      runHook postInstall
+    '';
+    meta = {
+      description = "Deepace KC908 host libraries (FTDI D3XX, libkcsdr) and udev rule";
+      homepage = "https://www.deepace.net/";
+      license = lib.licenses.unfree;
+      sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+      platforms = [ "x86_64-linux" ];
+    };
+  };
 }

@@ -1,6 +1,6 @@
 # hydrasdr_433: dedicated HydraSDR fork of rtl_433 (native CF32/float32 IQ),
 # matching RF-Swift-images' hydrasdr433_soft_install. The upstream CMake would
-# FetchContent libhydrasdr from GitHub when it is not found locally — impossible
+# FetchContent libhydrasdr from GitHub when it is not found locally - impossible
 # in the Nix sandbox, and it triggers whenever ENABLE_HYDRASDR=ON regardless of
 # HYDRASDR_FETCH_FROM_GIT. Its FindHydraSDR.cmake also probes the pkg-config
 # module `hydrasdr`, but ours is named `libhydrasdr`, so autodetection misses.

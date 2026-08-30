@@ -1,8 +1,24 @@
-# LuaRadio, HydraSDR fork. LuaRadio is not in nixpkgs, so this is a standalone
-# source build (not an override).
+# LuaRadio, HydraSDR fork. LuaRadio has no build step: it is LuaJIT plus the
+# `radio` Lua tree, and every device backend is opened at run time with
+# ffi.load by bare library name (librtlsdr.so, libhackrf.so, libairspy.so,
+# libhydrasdr.so, libbladeRF.so, libuhd.so, libSoapySDR.so ...). Nothing links
+# them, so the wrapper has to put those libraries where the dynamic loader
+# finds them. The unversioned names ffi.load asks for live in the -dev outputs
+# of split packages, hence both lib and dev directories go on the path.
 { lib, stdenv, fetchFromGitHub, luajit, pkg-config, fftwFloat, liquid-dsp
-, volk, makeWrapper }:
+, volk, makeWrapper
+, rtl-sdr, hackrf, airspy, airspyhf, libhydrasdr, libbladeRF, uhd
+, soapysdr-with-plugins }:
 
+let
+  available = p: lib.meta.availableOn stdenv.hostPlatform p;
+  deviceLibs = builtins.filter available
+    [ rtl-sdr hackrf airspy airspyhf libhydrasdr libbladeRF uhd soapysdr-with-plugins ];
+  runtimeLibs = [ fftwFloat liquid-dsp volk ] ++ deviceLibs;
+  libraryPath = lib.concatMapStringsSep ":"
+    (p: "${lib.getLib p}/lib:${lib.getDev p}/lib") runtimeLibs;
+  ldVar = if stdenv.hostPlatform.isDarwin then "DYLD_LIBRARY_PATH" else "LD_LIBRARY_PATH";
+in
 stdenv.mkDerivation {
   pname = "luaradio-hydrasdr";
   version = "unstable-hydrasdr";
@@ -19,27 +35,27 @@ stdenv.mkDerivation {
 
   dontBuild = true;
 
-  # LuaRadio ships a Makefile that installs the Lua sources and a `luaradio` CLI.
   installPhase = ''
     runHook preInstall
     make install PREFIX=$out LUAJIT=${luajit}/bin/luajit || {
-      # Fallback: install the tree by hand if the Makefile target differs.
       mkdir -p $out/bin $out/share/luaradio
       cp -r radio $out/share/luaradio/ 2>/dev/null || true
       install -Dm755 luaradio $out/bin/luaradio 2>/dev/null || true
     }
     if [ -e $out/bin/luaradio ]; then
       wrapProgram $out/bin/luaradio \
-        --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ fftwFloat liquid-dsp volk ]}"
+        --prefix ${ldVar} : "${libraryPath}"
     fi
     runHook postInstall
   '';
 
+  passthru.deviceLibraries = deviceLibs;
+
   meta = {
-    description = "LuaRadio (HydraSDR fork): lightweight scriptable SDR framework";
+    description = "LuaRadio (HydraSDR fork): lightweight scriptable SDR framework, with its device backends on the library path";
     homepage = "https://github.com/hydrasdr/luaradio";
     license = lib.licenses.mit;
-    platforms = lib.platforms.linux;
+    platforms = lib.platforms.unix;
     mainProgram = "luaradio";
   };
 }

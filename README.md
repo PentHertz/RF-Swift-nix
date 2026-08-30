@@ -66,6 +66,20 @@ therefore be substantial, while later launches reuse the same Nix store closure.
 
 Creating an environment eagerly builds its whole tool closure once; `--lazy` builds each tool the first time it is called. Either way, "build" is mostly "download a prebuilt binary from a cache", not "compile". Standard nixpkgs tools come prebuilt from `cache.nixos.org`; only tools not in a cache compile locally, which here is the handful of derivations in `pkgs/`. The architecture-specific cache workflows build the environments and push them to a binary cache, so once configured, even those download prebuilt (see [`docs/ci-cd.md`](docs/ci-cd.md)).
 
+## OpenGL and hardware access on hosts that are not NixOS
+
+nixpkgs GUI tools (SDR++, gqrx, inspectrum, GNU Radio Companion, ...) link against nixpkgs' Mesa and libglvnd, which find GPU drivers only where NixOS installs them (`/run/opengl-driver`). Every Linux environment therefore ships `rfswift-gl` ([`pkgs/rfswift-gl.nix`](pkgs/rfswift-gl.nix)), the nixGL approach in package form: `share/rfswift/gl.env` lists the variables that point the loaders at Mesa's drivers from this pin, and `bin/rfswift-gl <program>` applies them. The RF Swift engine exports them automatically on non-NixOS hosts; by hand:
+
+    nix run .#rfswift-gl -- sdrpp
+
+The proprietary NVIDIA driver needs its own user-space libraries, matching the host's kernel module, so `rfswift-gl-nvidia` is built impurely (`RFSWIFT_NVIDIA_VERSION=<version from /proc/driver/nvidia/version> nix build --impure .#pkg-rfswift-gl-nvidia`), with Mesa kept behind it for hybrid GPUs. The engine does this once per driver version.
+
+Intel, AMD, VMware/virtio and every other open kernel driver are served by Mesa from this pin; on macOS nixpkgs programs use Apple's OpenGL/Metal directly and need nothing. Both runtime packages ship `rfswift-gl-probe`, which creates an OpenGL context without a window and prints the driver that answered (`nix run .#rfswift-gl -- rfswift-gl-probe`); `rfswift nix gl --check` runs it for an environment.
+
+SDR++ (`sdrpp-hydrasdr`) is built with every device source RF Swift's images ship, on the architectures their libraries exist for: HydraSDR, Harogic (x86_64/aarch64 Linux), SignalHound BB60 (Linux and Apple Silicon) and Deepace KC908 (x86_64 Linux). SDR++, gqrx (via the PentHertz gr-osmosdr), SigDigger, SatDump and rtl_433 all link RF Swift's own SoapySDR plugin set (nixpkgs modules plus SoapyHydraSDR, SoapyRFNM, SoapyXTRX, LiteX M2SDR, uSDR), so each of them sees the same radios; URH compiles its native backends against the same libraries and LuaRadio finds them on its library path.
+
+Native tools run as the user, so SDR/RFID hardware needs the udev rules the packages ship (`lib/udev/rules.d`, `etc/udev/rules.d`) installed on the host: `rfswift nix udev <env>` collects them from the environment and installs them.
+
 ## Environments
 
 Run `rfswift nix catalog` or `nix eval .#catalog` for the live list. At a glance:

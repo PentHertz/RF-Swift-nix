@@ -1,6 +1,6 @@
 # gr-hydrasdr: dedicated GNU Radio OOT source block for HydraSDR
-# (PentHertz/gr-hydrasdr). This is the standalone `hydrasdr` block set — distinct
-# from the HydraSDR backend inside gr-osmosdr — matching RF-Swift-images'
+# (PentHertz/gr-hydrasdr). This is the standalone `hydrasdr` block set - distinct
+# from the HydraSDR backend inside gr-osmosdr - matching RF-Swift-images'
 # grhydrasdr_grmod_install. It links libhydrasdr and ships its own
 # FindLibHYDRASDR.cmake (pkg-config + header/lib search), which resolves the Nix
 # libhydrasdr via its libhydrasdr.pc. Available on Darwin too: libhydrasdr and

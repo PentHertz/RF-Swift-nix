@@ -26,6 +26,15 @@ let
     extraInstallCommands = ''
       install -Dm444 ${appimageContents}/Logic.desktop -t $out/share/applications 2>/dev/null || true
       mkdir -p $out/bin && ln -sf $out/bin/${pname} $out/bin/logic2 2>/dev/null || true
+      # Saleae's AppImage installs its udev rule at first run rather than
+      # shipping it in a standard location, so `rfswift nix udev` would not find
+      # it. Ship the rule (Saleae vendor 21a9, legacy Lakeview 0925) so the nix
+      # engine installs it and the analyzer is reachable without root.
+      install -Dm444 /dev/stdin $out/lib/udev/rules.d/99-SaleaeLogic.rules <<'RULES'
+# Saleae Logic analyzers - installed by RF Swift (nix engine)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0925", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="21a9", MODE="0666", TAG+="uaccess"
+RULES
     '';
     meta = commonMeta // { platforms = [ "x86_64-linux" ]; };
   };

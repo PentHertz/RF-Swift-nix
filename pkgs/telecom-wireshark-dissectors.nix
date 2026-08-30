@@ -1,6 +1,5 @@
 # telecom-wireshark-dissectors: the two Lua dissectors the
-# telecom_4Gto5G_extended image drops into Wireshark's plugin directory —
-# UERANSIM's RLS (radio link simulation) dissector and SCAT's baseband-diag
+# telecom_4Gto5G_extended image drops into Wireshark's plugin directory - # UERANSIM's RLS (radio link simulation) dissector and SCAT's baseband-diag
 # dissector (PentHertz fork). Wireshark's store path is immutable under Nix, so
 # they are shipped under share/wireshark/plugins; load them from Wireshark's
 # personal plugin folder (~/.local/lib/wireshark/plugins) or via
