@@ -26,7 +26,7 @@ stdenv.mkDerivation {
   postPatch = ''
     f=include/srsran/support/cpu_features.h
     if [ -f "$f" ]; then
-      perl -0777 -i -pe 's/constexpr auto cpu_features_included = to_array<cpu_feature>\(\{/static constexpr cpu_feature cpu_features_included_arr[] = {\n    cpu_feature::sse4_1,/' "$f"
+      perl -0777 -i -pe 's/constexpr auto cpu_features_included = to_array<cpu_feature>\(\{/static constexpr cpu_feature cpu_features_included_arr[] = {\n#ifdef __x86_64__\n    cpu_feature::sse4_1,\n#endif\n#ifdef __aarch64__\n    cpu_feature::neon,\n#endif/' "$f"
       perl -0777 -i -pe 's/\}\);\n\} \/\/ namespace detail/};\nconstexpr auto cpu_features_included = to_array(cpu_features_included_arr);\n} \/\/ namespace detail/' "$f"
     fi
   '';
