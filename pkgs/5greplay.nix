@@ -53,7 +53,7 @@ stdenv.mkDerivation {
     description = "5G NAS/NGAP fuzzing and replay tool";
     homepage = "https://github.com/Montimage/5Greplay";
     license = lib.licenses.gpl3Plus;
-    platforms = [ "x86_64-linux" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
     mainProgram = "5greplay";
   };
 }

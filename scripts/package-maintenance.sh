@@ -72,11 +72,19 @@ new_package() {
       "$template" > "$tmp"
   install -m 0644 "$tmp" "$target"
   rm -f "$tmp"
-  sed -i "/## PACKAGE-MAINTENANCE: INSERT BEFORE/i\\  $name = callPackage ./$name.nix { };" pkgs/default.nix
+  # `i\` followed by a newline is the one insert form both GNU and BSD sed take.
+  sed_inplace "/## PACKAGE-MAINTENANCE: INSERT BEFORE/i\\"$'\n'"  $name = callPackage ./$name.nix { };" pkgs/default.nix
   echo "Created $target and registered pkg-$name."
   echo "Next: edit its TODO fields, add '$name' to environments.nix, then run:"
   echo "  scripts/package-maintenance.sh prefetch $name"
   echo "  scripts/package-maintenance.sh check $name"
+}
+
+# GNU sed spells in-place editing -i[SUFFIX]; BSD/macOS sed needs -i '' as two
+# words and rejects a bare -i. Route every in-place edit through this so the
+# maintenance workflow (and tests/verify.sh, which exercises it) runs on both.
+sed_inplace() {
+  if sed --version >/dev/null 2>&1; then sed -i "$@"; else sed -i '' "$@"; fi
 }
 
 prefetch_package() {
@@ -90,11 +98,13 @@ prefetch_package() {
     fi
     hash=$(printf '%s\n' "$output" | sed -nE 's/.*got:[[:space:]]*(sha256-[A-Za-z0-9+\/=]+).*/\1/p' | tail -1)
     [[ -n "$hash" ]] || { printf '%s\n' "$output" >&2; die "failure was not a hash mismatch"; }
+    # `1,/re/` (not GNU-only `0,/re/`): a hash never sits on line 1 of a
+    # package file, so the range still ends at the first match on both seds.
     if grep -q 'lib.fakeHash' "$file"; then
-      sed -i "0,/lib.fakeHash/s|lib.fakeHash|\"$hash\"|" "$file"
+      sed_inplace "1,/lib.fakeHash/s|lib.fakeHash|\"$hash\"|" "$file"
     else
       # Replace the first stale SRI source hash; review the resulting diff.
-      sed -i -E "0,/hash = \"sha256-[A-Za-z0-9+\/=]+\"/s||hash = \"$hash\"|" "$file"
+      sed_inplace -E "1,/hash = \"sha256-[A-Za-z0-9+\/=]+\"/s||hash = \"$hash\"|" "$file"
     fi
     echo "Pinned hash $attempt in $file: $hash"
   done
@@ -175,8 +185,17 @@ audit_repo() {
     echo "error: vendor artifacts must cover exactly every declared platform" >&2
     failed=1
   }
-  if rg -n '^[[:space:]]*(hash|vendorHash|cargoHash)[[:space:]]*=.*lib\.(fakeHash|fakeSha256)|sha256-[A]{20,}' \
-      pkgs --glob '*.nix'; then
+  # ripgrep is not a given (macOS ships without it). Without this fallback a
+  # missing `rg` made the `if` false and silently skipped the placeholder audit.
+  local placeholder_pattern placeholder_hits
+  placeholder_pattern='^[[:space:]]*(hash|vendorHash|cargoHash)[[:space:]]*=.*lib\.(fakeHash|fakeSha256)|sha256-[A]{20,}'
+  if command -v rg >/dev/null 2>&1; then
+    placeholder_hits=$(rg -n "$placeholder_pattern" pkgs --glob '*.nix' || true)
+  else
+    placeholder_hits=$(grep -rnE "$placeholder_pattern" --include='*.nix' pkgs || true)
+  fi
+  if [[ -n "$placeholder_hits" ]]; then
+    printf '%s\n' "$placeholder_hits" >&2
     echo "error: placeholder hashes remain" >&2; failed=1
   fi
   bash -n scripts/*.sh pkgs/update.sh

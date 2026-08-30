@@ -52,6 +52,7 @@ stdenv.mkDerivation {
     description = "GSM/GPRS BTS for the YATE telephony engine (PentHertz rc3 fork)";
     homepage = "https://github.com/PentHertz/yatebts-rc3-nonoff";
     license = lib.licenses.gpl2Only;
-    platforms = [ "x86_64-linux" ];
+    # Builds on aarch64 too (routinely compiled on Raspberry Pi).
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
   };
 }

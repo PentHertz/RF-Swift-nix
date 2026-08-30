@@ -84,7 +84,9 @@ stdenv.mkDerivation {
   # permissive legacy behaviour. Pin an old standard and quiet the legacy noise.
   env.NIX_CFLAGS_COMPILE = toString [
     "-std=gnu++17"          # UHD 4.10 headers need C++17 (std::optional); OpenBTS has no dynamic exception specs
-    "-msse4.1"              # the Transceiver52M SIMD convert/convolve code uses SSE4.1 intrinsics
+    # Transceiver52M's convert/convolve SIMD paths are behind HAVE_SSE3/HAVE_SSE4_1
+    # with plain-C fallbacks, so only x86_64 gets the SSE flag; aarch64 builds generic.
+    (lib.optionalString stdenv.hostPlatform.isx86_64 "-msse4.1")
     "-fpermissive"
     "-fcommon"
     "-Wno-error"
@@ -129,6 +131,6 @@ stdenv.mkDerivation {
     description = "OpenBTS: 2G GSM/GPRS base station (PentHertz resolute fork, UHD transceiver)";
     homepage = "https://github.com/PentHertz/OpenBTS";
     license = lib.licenses.agpl3Plus;
-    platforms = [ "x86_64-linux" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
   };
 }

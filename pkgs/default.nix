@@ -144,6 +144,8 @@ with pkgs;
   gr-rftap = callPackage ./oot/gr-rftap.nix { };
   gr-radio_astro = callPackage ./oot/gr-radio_astro.nix { };
   gr-cessb = callPackage ./oot/gr-cessb.nix { };
+  gr-hydrasdr = callPackage ./oot/gr-hydrasdr.nix { inherit libhydrasdr; };
+  gr-bladeRF = callPackage ./oot/gr-bladeRF.nix { inherit gr-osmosdr-penthertz; };
 
   # Source deps not in nixpkgs, needed by a few OOT modules.
   itpp = callPackage ./itpp.nix { };
@@ -162,10 +164,10 @@ with pkgs;
       gr-nordic gr-pdu_utils gr-timing_utils gr-sandia_utils gr-fhss_utils
       gr-zwave_poore gr-mixalot gr-reveng gr-j2497 gr-m17
       gr-grnet gr-aoa gr-correctiq gr-dsd gr-nrsc5 gr-ntsc-rc gr-mer gr-flarm
-      gr-guiextra gr-rftap gr-radio_astro gr-cessb;
+      gr-guiextra gr-rftap gr-radio_astro gr-cessb gr-hydrasdr gr-bladeRF gr-funcube;
   };
   gnuradio-rfswift-light = callPackage ./gnuradio-rfswift-light.nix {
-    inherit gr-osmosdr-penthertz;
+    inherit gr-osmosdr-penthertz gr-hydrasdr gr-bladeRF gr-funcube;
   };
 
   ## --- PentHertz / HydraSDR forks (compiled from source) ----------------
@@ -175,6 +177,98 @@ with pkgs;
   inspectrum-hydrasdr = callPackage ./inspectrum-hydrasdr.nix { };
   sdrpp-hydrasdr = callPackage ./sdrpp-hydrasdr.nix { inherit libhydrasdr; };
   luaradio-hydrasdr = callPackage ./luaradio-hydrasdr.nix { };
+  hydrasdr433 = callPackage ./hydrasdr433.nix { inherit libhydrasdr; };
+  kalibrate-hydrasdr = callPackage ./kalibrate-hydrasdr.nix { inherit libhydrasdr; };
+
+  ## --- Device libraries the sdrsa_devices image builds from source ---------
+  # XTRX host stack (xtrx-sdr): liblms7002m -> libxtrxdsp/libxtrxll -> libxtrx
+  # (which also builds SoapyXTRX).
+  liblms7002m = callPackage ./liblms7002m.nix { };
+  libusb3380 = callPackage ./libusb3380.nix { };
+  libxtrxdsp = callPackage ./libxtrxdsp.nix { };
+  libxtrxll = callPackage ./libxtrxll.nix { inherit libusb3380; };
+  libxtrx = callPackage ./libxtrx.nix { inherit liblms7002m libxtrxdsp libxtrxll; };
+  # FUNcube Dongle: GNU Radio blocks + Qt controller.
+  gr-funcube = callPackage ./oot/gr-funcube.nix { };
+  qthid = callPackage ./qthid.nix { };
+  # RFNM: host library + SoapySDR module.
+  librfnm = callPackage ./librfnm.nix { };
+  soapy-rfnm = callPackage ./soapy-rfnm.nix { inherit librfnm; };
+  # HydraSDR RFOne SoapySDR module (PentHertz fork).
+  soapyhydrasdr = callPackage ./soapyhydrasdr.nix { inherit libhydrasdr; };
+  # LiteX M2SDR and Wavelet Lab uSDR host stacks (Linux, PCIe/USB drivers).
+  litex-m2sdr = callPackage ./litex-m2sdr.nix { };
+  usdr-lib = callPackage ./usdr-lib.nix { };
+
+  # SoapySDR only finds modules that are on its wrapper's SOAPY_SDR_PLUGIN_PATH,
+  # which nixpkgs builds from the `extraPackages` of soapysdr-with-plugins. That
+  # list is fixed inside nixpkgs' package.nix (its `.override` only re-calls the
+  # file, so the list cannot be appended to), so rebuild the plugin set here:
+  # nixpkgs' own modules plus the source-built ones above, each only where it
+  # is available (litex-m2sdr / usdr-lib are Linux-only).
+  soapysdr-with-plugins = pkgs.soapysdr.override {
+    extraPackages = builtins.filter (p: lib.meta.availableOn stdenv.hostPlatform p) ([
+      limesuite soapyairspy soapyaudio soapybladerf soapyhackrf
+      soapyplutosdr soapyremote soapyrtlsdr
+    ] ++ lib.optionals stdenv.hostPlatform.isLinux [ soapyuhd ]
+      ++ [ soapyhydrasdr soapy-rfnm libxtrx litex-m2sdr usdr-lib ]);
+  };
+
+  ## --- sdr_full extra software (RF-Swift-images sdr_full.docker) -----------
+  gps-sdr-sim = callPackage ./gps-sdr-sim.nix { };
+  waving-z = callPackage ./waving-z.nix { };
+  pyspecsdr = callPackage ./pyspecsdr.nix { };
+  meshtastic-sdr = callPackage ./meshtastic-sdr.nix { };
+
+  ## --- Telecom extras from the telecom images ---------------------------
+  # nixpkgs pins yate to i686/x86_64 for no code reason; it builds on aarch64
+  # (routinely on Raspberry Pi). Widen it so the arm64 telecom env keeps YATE
+  # and YateBTS, which links against it.
+  yate = pkgs.yate.overrideAttrs (old: {
+    # The bundled miniwebrtc only knows x86, 32-bit ARM, MIPS and PowerPC and
+    # #errors on anything else; teach it aarch64 (64-bit little-endian, like
+    # its x86_64 entry) so the resampler module compiles on arm64.
+    postPatch = (old.postPatch or "") + ''
+      substituteInPlace libs/miniwebrtc/typedefs.h --replace-fail \
+        '#elif defined(__mips__)' \
+        '#elif defined(__aarch64__)
+#define WEBRTC_ARCH_ARM64
+#define WEBRTC_ARCH_64_BITS
+#define WEBRTC_ARCH_LITTLE_ENDIAN
+#elif defined(__mips__)'
+    '';
+    meta = (old.meta or { }) // { platforms = [ "x86_64-linux" "aarch64-linux" ]; };
+  });
+  bromelia = callPackage ./bromelia.nix { };
+  py5sig = callPackage ./py5sig.nix { };
+  telecom-wireshark-dissectors = callPackage ./telecom-wireshark-dissectors.nix { };
+  # Patched training variants (FlUxIuS forks), named after the patch so they
+  # are never mistaken for the stock stacks they sit next to.
+  ueransim_nullciph = callPackage ./ueransim_nullciph.nix { };
+  open5gs_nohttp2 = callPackage ./open5gs-variant.nix {
+    variant = "nohttp2";
+    rev = "a7a0bba99f08dfa8e79eef8d626082b6ef5e2564";
+    hash = "sha256-DyROroWj17BjhKQL4/jvECvSn+77DxWQLFHX6+Aw4tU=";
+    description = "Open5GS 2.7.5 patched to serve SBI over HTTP/1.1 only (nohttp2 training variant)";
+  };
+  open5gs_0caps = callPackage ./open5gs-variant.nix {
+    variant = "0caps";
+    rev = "f431a99dd7b4c36f44fd9014b46529544a9523d2";
+    hash = "sha256-jk6sZ0kxhKE1AkBOCgk31JFq4z7IUASy5rGvG0P+oFQ=";
+    description = "Open5GS 2.7.5 patched to accept UEs with zero security capabilities (0caps training variant)";
+  };
+  # bladeRF-specific 5G SA stack (telecom_5G_bladerf image): srsRAN Project
+  # fork + the SoapyBladeRF fork it expects, in their own plugin set so the
+  # stock bladeRF module is swapped out only in that environment.
+  soapybladerf-srsran = callPackage ./soapybladerf-srsran.nix { };
+  srsran-project-bladerf = callPackage ./srsran-project-bladerf.nix { };
+  soapysdr-with-plugins-bladerf-srsran = pkgs.soapysdr.override {
+    extraPackages = builtins.filter (p: lib.meta.availableOn stdenv.hostPlatform p) ([
+      limesuite soapyairspy soapyaudio soapyhackrf
+      soapyplutosdr soapyremote soapyrtlsdr
+    ] ++ lib.optionals stdenv.hostPlatform.isLinux [ soapyuhd ]
+      ++ [ soapybladerf-srsran soapyhydrasdr soapy-rfnm ]);
+  };
 
   ## --- Telecom (source Python) -----------------------------------------
   pysim = callPackage ./pysim.nix { };
@@ -184,7 +278,9 @@ with pkgs;
   osmo-trx = callPackage ./osmo-trx.nix { };
   ocudu = callPackage ./ocudu.nix { };
   mmt-dpi = callPackage ./mmt-dpi.nix { };
-  yatebts = callPackage ./yatebts.nix { };
+  # Link against our platform-widened yate (callPackage would otherwise pick
+  # nixpkgs' x86-only one and drop YateBTS on aarch64).
+  yatebts = callPackage ./yatebts.nix { inherit yate; };
   "5greplay" = callPackage ./5greplay.nix { inherit mmt-dpi; };
   cryptomobile = callPackage ./cryptomobile.nix { };
   pysctp = callPackage ./pysctp.nix { };

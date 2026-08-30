@@ -46,6 +46,16 @@
               crccheck = pyprev.crccheck.overrideAttrs (o: {
                 meta = (o.meta or { }) // { platforms = prev.lib.platforms.unix; };
               });
+              # meshtastic's runtime deps are all cross-platform (it declares
+              # aarch64-darwin itself), but its test inputs pull pytap2, a
+              # Linux-only TUN/TAP binding. Merely evaluating that throws
+              # "not available on the requested hostPlatform", which takes the
+              # whole sdr_full environment down on macOS. Skip the tests there.
+              meshtastic = pyprev.meshtastic.overridePythonAttrs (o: {
+                doCheck = false;
+                nativeCheckInputs = [ ];
+                checkInputs = [ ];
+              });
             })
           ];
           # nixpkgs adds QtWebEngine unconditionally, although Cutter 2.5.0

@@ -26,10 +26,11 @@ stdenv.mkDerivation {
   # braced-init-list; gcc-13/14/15 no longer deduce the array extent N from a
   # braced-init-list when T is given explicitly. Route it through a named
   # C-array so N deduces from a real array type (which every gcc accepts), and
-  # force SSE4.1 so the list is never empty.
+  # seed it with the baseline feature of each architecture (SSE4.1 on x86_64,
+  # NEON on aarch64 — the header's own enum is per-arch) so it is never empty.
   postPatch = ''
     f=include/ocudu/support/cpu_features.h
-    perl -0777 -i -pe 's/constexpr auto cpu_features_included = to_array<cpu_feature>\(\{/static constexpr cpu_feature cpu_features_included_arr[] = {\n    cpu_feature::sse4_1,/' "$f"
+    perl -0777 -i -pe 's/constexpr auto cpu_features_included = to_array<cpu_feature>\(\{/static constexpr cpu_feature cpu_features_included_arr[] = {\n#ifdef __x86_64__\n    cpu_feature::sse4_1,\n#endif\n#ifdef __aarch64__\n    cpu_feature::neon,\n#endif/' "$f"
     perl -0777 -i -pe 's/\}\);\n\} \/\/ namespace detail/};\nconstexpr auto cpu_features_included = to_array(cpu_features_included_arr);\n} \/\/ namespace detail/' "$f"
 
     # cmake-sbom's per-target install scripts can run before the corresponding
@@ -47,13 +48,23 @@ stdenv.mkDerivation {
     # Optional debug/telemetry deps not needed for a functional build.
     "-DENABLE_BACKWARD=OFF"
     "-DBUILD_TESTS=OFF"
+  ] ++ lib.optionals stdenv.hostPlatform.isAarch64 [
+    # On aarch64 the build tunes with -mcpu=${MCPU} and the NEON CRC code
+    # probes "-march=${MARCH}+crypto"; both default to "native", which gcc
+    # rejects in the "+crypto" form and which would tune to the build host
+    # anyway. Use the generic ARMv8 baseline: reproducible binaries and a valid
+    # "-march=armv8-a+crypto" for the crypto-extension CRC path.
+    "-DMCPU=generic"
+    "-DMARCH=armv8-a"
   ];
-  env.NIX_CFLAGS_COMPILE = "-Wno-error -msse4.1";
+  # SSE4.1 is the x86 baseline the SIMD code expects; aarch64 has NEON by default.
+  env.NIX_CFLAGS_COMPILE = "-Wno-error" + lib.optionalString stdenv.hostPlatform.isx86_64 " -msse4.1";
 
   meta = {
     description = "5G SA RAN stack (O-CU / O-DU), srsRAN-derived (used by RF Swift for 5G standalone)";
     homepage = "https://gitlab.com/ocudu/ocudu";
     license = lib.licenses.agpl3Plus;
-    platforms = [ "x86_64-linux" ];
+    # x86_64 and aarch64 (the srsRAN team tests both; the images build arm64).
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
   };
 }

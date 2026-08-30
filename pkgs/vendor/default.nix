@@ -80,7 +80,11 @@ rec {
     nativeBuildInputs = [ unzip ]
       ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ]
       ++ lib.optionals stdenv.hostPlatform.isDarwin [ fixDarwinDylibNames ];
-    buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ libusb1 libftdi1 ccLib ];
+    # The macOS dylibs link libusb too (their only non-system dependency), so it
+    # must be in the closure on Darwin as well — see the install_name_tool rewrite
+    # below.
+    buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ libusb1 libftdi1 ccLib ]
+      ++ lib.optionals stdenv.hostPlatform.isDarwin [ libusb1 ];
     autoPatchelfIgnoreMissingDeps = true;
     dontBuild = true;
     # Extract the libraries for this platform, plus the (arch-independent) API
@@ -112,6 +116,13 @@ rec {
         [ -e "$f" ] || continue
         base=$(basename "$f"); stem=''${base%%.*}
         ln -sf "$base" "$out/lib/$stem.dylib"
+        # Signal Hound's macOS dylibs hardcode a Homebrew libusb dependency
+        # (/opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib) that does not exist
+        # under Nix, so dlopen (URH's ctypes loader) fails with "Library not
+        # loaded". Repoint it at the Nix libusb.
+        install_name_tool -change \
+          /opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib \
+          ${libusb1}/lib/libusb-1.0.0.dylib "$f"
       done
     '' else ''
       find src -type f -name 'lib*_api.so*' -exec cp -a {} $out/lib/ \;

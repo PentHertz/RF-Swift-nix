@@ -35,6 +35,7 @@ stdenv.mkDerivation {
     description = "Montimage MMT deep-packet-inspection SDK";
     homepage = "https://github.com/Montimage/mmt-dpi";
     license = lib.licenses.gpl3Plus;
-    platforms = [ "x86_64-linux" ];
+    # Plain C, no arch-specific code; x86_64 and aarch64 (the images build arm64).
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
   };
 }

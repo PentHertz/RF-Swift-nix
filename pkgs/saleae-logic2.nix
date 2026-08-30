@@ -1,31 +1,65 @@
-# Saleae Logic 2: the logic-analyzer GUI for Saleae devices. Free (unfree license)
-# AppImage download, wrapped with appimageTools (Electron app). Same URL RF Swift
-# uses (downloads2.saleae.com).
-{ lib, appimageTools, fetchurl }:
+# Saleae Logic 2: the logic-analyzer GUI for Saleae devices (unfree binary
+# download from downloads2.saleae.com, the same source RF Swift uses).
+#
+#   * Linux x86_64: the Type-2 AppImage, wrapped with appimageTools.
+#   * aarch64-darwin: the official macOS arm64 zip, which ships a signed
+#     "Saleae Logic.app" Electron bundle; install it under $out/Applications and
+#     expose its executable on $PATH.
+{ lib, stdenvNoCC, appimageTools, fetchurl, unzip }:
 
 let
   pname = "saleae-logic2";
   version = "2.4.46";
-  src = fetchurl {
+
+  linuxSrc = fetchurl {
     url = "https://downloads2.saleae.com/logic2/Logic-${version}-linux-x64.AppImage";
     hash = "sha256-goMu0NMWZwHX9PffV6YgtyGiOIPgz+jy6OlaLmcg1vI=";
   };
-  appimageContents = appimageTools.extractType2 { inherit pname version src; };
-in
-appimageTools.wrapType2 {
-  inherit pname version src;
+  appimageContents = appimageTools.extractType2 {
+    inherit pname version;
+    src = linuxSrc;
+  };
 
-  extraInstallCommands = ''
-    install -Dm444 ${appimageContents}/Logic.desktop -t $out/share/applications 2>/dev/null || true
-    mkdir -p $out/bin && ln -sf $out/bin/${pname} $out/bin/logic2 2>/dev/null || true
-  '';
+  linux = appimageTools.wrapType2 {
+    inherit pname version;
+    src = linuxSrc;
+    extraInstallCommands = ''
+      install -Dm444 ${appimageContents}/Logic.desktop -t $out/share/applications 2>/dev/null || true
+      mkdir -p $out/bin && ln -sf $out/bin/${pname} $out/bin/logic2 2>/dev/null || true
+    '';
+    meta = commonMeta // { platforms = [ "x86_64-linux" ]; };
+  };
 
-  meta = {
+  darwin = stdenvNoCC.mkDerivation {
+    inherit pname version;
+    src = fetchurl {
+      url = "https://downloads2.saleae.com/logic2/Logic-${version}-macos-arm64.zip";
+      hash = "sha256-lC0aSPHTdzRfvAaowA6JLkqMWWWcYupCqUFHHqO32Us=";
+    };
+    nativeBuildInputs = [ unzip ];
+    # The zip's top-level entry is the .app itself, so unpack into a dir.
+    sourceRoot = ".";
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out/Applications"
+      cp -R "Saleae Logic.app" "$out/Applications/"
+      # Expose the bundle's executable on PATH under both names. Electron resolves
+      # its resources from the real path of the binary (inside the .app), so a
+      # symlink into the bundle launches correctly.
+      mkdir -p "$out/bin"
+      ln -s "$out/Applications/Saleae Logic.app/Contents/MacOS/Logic" "$out/bin/${pname}"
+      ln -s "$out/bin/${pname}" "$out/bin/logic2"
+      runHook postInstall
+    '';
+    meta = commonMeta // { platforms = [ "aarch64-darwin" ]; };
+  };
+
+  commonMeta = {
     description = "Saleae Logic 2 logic-analyzer software";
     homepage = "https://www.saleae.com/";
     license = lib.licenses.unfree;
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
-    platforms = [ "x86_64-linux" ];
     mainProgram = "saleae-logic2";
   };
-}
+in
+if stdenvNoCC.hostPlatform.isDarwin then darwin else linux

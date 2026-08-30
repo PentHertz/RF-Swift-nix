@@ -42,6 +42,11 @@
       "libresdr-firmware"
       "signalhound-sdk"
       "harogic-htra-sdk"
+      # Device stacks the sdrsa_devices image builds from source.
+      "libxtrx"
+      "librfnm"
+      "litex-m2sdr"
+      "usdr-lib"
     ];
     packages = [
       # SoapySDR + all its device plugins (rtlsdr, hackrf, uhd, airspy, bladerf, lime, plutosdr, remote, ...)
@@ -65,6 +70,17 @@
       "libresdr-firmware"
       "signalhound-sdk"
       "harogic-htra-sdk"
+      # Device stacks the sdrsa_devices image builds from source: XTRX (with
+      # SoapyXTRX), RFNM (+ SoapyRFNM), LiteX M2SDR, uSDR, FUNcube (qthid GUI;
+      # gr-funcube is bundled into GNU Radio) and SoapyHydraSDR. The Soapy
+      # modules are also wired into soapysdr-with-plugins (pkgs/default.nix).
+      "libxtrx"
+      "librfnm"
+      "soapy-rfnm"
+      "soapyhydrasdr"
+      "litex-m2sdr"
+      "usdr-lib"
+      "qthid"
       # GNU Radio is after the device layer; OOT modules are bundled in it so
       # GRC discovers them from the same prefix.
       "gnuradio-rfswift-light"
@@ -77,6 +93,8 @@
       "urh-ng"
       "multimon-ng"
       "rtl_433"
+      "hydrasdr433"
+      "kalibrate-hydrasdr"
       "dump1090-fa"
       "readsb"
       "dumpvdl2"
@@ -99,15 +117,9 @@
     # Remaining device modules present in the image scripts but not yet
     # reproducibly packaged for Nix are explicit rather than silently claimed.
     missing = [
-      "libxtrx / SoapyXTRX"
-      "Funcube Dongle host + Soapy module"
-      "librfnm / SoapyRFNM / gr-rfnm"
-      "LiteX M2SDR host library"
-      "libusdr"
-      "SoapyHydraSDR"
       "SoapyHarogic"
+      "XTRX / LiteX M2SDR / uSDR PCIe kernel modules (host drivers; the userspace stacks are packaged)"
       "SDRplay API / SoapySDRPlay (nixpkgs 3.15.1 source URL currently returns 404)"
-      "gr-hydrasdr"
       "gr-htra"
       "gr-signalhound"
       "Leo Bodnar LBE-1420/1421 tools"
@@ -115,6 +127,11 @@
       "pocketVNA"
       "LibreCAL"
       "Lotus BUDC tuner"
+      # Prebuilt Linux binaries / large Ubuntu-specific installers with no clean
+      # source build: not reproducibly packageable for Nix (and Linux-only).
+      "KCSDI (Deepace, prebuilt AppImage)"
+      "Artemis (prebuilt binary)"
+      "FISSURE (RF framework; large pinned pip/apt install into a system venv)"
     ];
   };
 
@@ -141,6 +158,11 @@
       "libresdr-firmware"
       "signalhound-sdk"
       "harogic-htra-sdk"
+      # Device stacks the sdrsa_devices image builds from source.
+      "libxtrx"
+      "librfnm"
+      "litex-m2sdr"
+      "usdr-lib"
     ];
     packages = [
       "soapysdr-with-plugins"
@@ -162,6 +184,17 @@
       "libresdr-firmware"
       "signalhound-sdk"
       "harogic-htra-sdk"
+      # Device stacks the sdrsa_devices image builds from source: XTRX (with
+      # SoapyXTRX), RFNM (+ SoapyRFNM), LiteX M2SDR, uSDR, FUNcube (qthid GUI;
+      # gr-funcube is bundled into GNU Radio) and SoapyHydraSDR. The Soapy
+      # modules are also wired into soapysdr-with-plugins (pkgs/default.nix).
+      "libxtrx"
+      "librfnm"
+      "soapy-rfnm"
+      "soapyhydrasdr"
+      "litex-m2sdr"
+      "usdr-lib"
+      "qthid"
       # GNU Radio bundled with the extended OOT modules added by sdr_full.
       "gnuradio-rfswift"
       "gqrx"
@@ -171,6 +204,8 @@
       "urh-ng"
       "multimon-ng"
       "rtl_433"
+      "hydrasdr433"
+      "kalibrate-hydrasdr"
       "dump1090-fa"
       "readsb"
       "dumpvdl2"
@@ -193,6 +228,15 @@
       "python3Packages.numpy"
       "python3Packages.scikit-learn"
       "python3Packages.pandas"
+      # Extra software the sdr_full image adds (scripts/sdr_softwares.sh).
+      "nfc-laboratory"
+      "ice9-bluetooth-sniffer"
+      "qradiolink"
+      "gps-sdr-sim"
+      "waving-z"
+      "pyspecsdr"
+      "meshtastic-sdr"
+      "python3Packages.meshtastic"
       # Signal Hound + Harogic device SDKs (auto-download from public URLs,
       # unfree, hashes pinned). The Spike GUI is opt-in: pkg-signalhound-spike.
       "trunk-recorder"
@@ -233,15 +277,15 @@
     # gr-flarm/gr-droneid (locally-packaged turbofec/CRCpp).
     missing = [
       "gr-DCF77_Receiver"
-      "libxtrx / SoapyXTRX"
-      "Funcube Dongle host + Soapy module"
-      "librfnm / SoapyRFNM / gr-rfnm"
-      "LiteX M2SDR host library"
-      "libusdr"
-      "SoapyHydraSDR"
+      # sdr_full image extras not yet packaged (scripts/sdr_softwares.sh):
+      "v2verifier (C++/Boost/OpenSSL + Tk/PIL Python GUI; mixed build not packaged yet)"
+      "tetra-kit-player (Node/TypeScript web player; needs an npm dependency lock hash)"
+      "osmo-tetra-sq5bpf + libosmo-dsp (tetra_suite; libosmo-dsp not in nixpkgs)"
+      "fl2k-examples (osmo-fl2k demo patches/scripts, not standalone tools)"
+      "ML/DL extras (tensorflow; the image itself fails on CPython 3.14). numpy/scikit-learn/pandas are included"
       "SoapyHarogic"
+      "XTRX / LiteX M2SDR / uSDR PCIe kernel modules (host drivers; the userspace stacks are packaged)"
       "SDRplay API / SoapySDRPlay (nixpkgs 3.15.1 source URL currently returns 404)"
-      "gr-hydrasdr"
       "gr-htra"
       "gr-signalhound"
       "Leo Bodnar LBE-1420/1421 tools"
@@ -249,6 +293,11 @@
       "pocketVNA"
       "LibreCAL"
       "Lotus BUDC tuner"
+      # Prebuilt Linux binaries / large Ubuntu-specific installers with no clean
+      # source build: not reproducibly packageable for Nix (and Linux-only).
+      "KCSDI (Deepace, prebuilt AppImage)"
+      "Artemis (prebuilt binary)"
+      "FISSURE (RF framework; large pinned pip/apt install into a system venv)"
     ];
   };
 
@@ -758,6 +807,9 @@
       "uhd"
       "limesuite"
       "hackrf"
+      # telecom_5G_bladerf runs the 5G stack on a bladeRF.
+      "libbladeRF"
+      "soapybladerf"
     ];
     packages = [
       # Protocol and SDR device libraries/drivers precede applications.
@@ -767,6 +819,8 @@
       "uhd"
       "limesuite"
       "hackrf"
+      "libbladeRF"
+      "soapybladerf"
       # Core network / RAN
       "srsran"
       "ocudu"
@@ -798,6 +852,17 @@
       "openbts-umts"
       "osmo-trx"
       "kalibrate-rtl"
+      # telecom_utils / telecom_4Gto5G_extended image extras.
+      "bromelia"
+      "py5sig"
+      "telecom-wireshark-dissectors"
+      "nmap"
+      "jupyter"
+      # Patched training variants; programs carry the variant name
+      # (ueransim_nullciph-nr-gnb, Open5GS_nohttp2, Open5GS_0caps, ...).
+      "ueransim_nullciph"
+      "open5gs_nohttp2"
+      "open5gs_0caps"
       # telecom_utils inherits sdr_light in the image build, so retain the
       # light/common GNU Radio module set here as well.
       "gnuradio-rfswift-light"
@@ -807,6 +872,52 @@
     # 3G (Osmocom SGSN/GGSN), 4G & 5G-NSA (srsRAN), 5G-SA (OCUDU O-CU/O-DU +
     # Open5GS core + UERANSIM). SIM/crypto: pysim, sysmo-usim-tool, CryptoMobile,
     # pycrate, pysctp, SCAT, modmobmap.
+    missing = [
+      "jss7 (Java SS7 stack, 17-module Maven build; its dependency closure can't be fetched inside the Nix sandbox)"
+      "Burp Suite (telecom_4Gto5G_extended; available in the network environment)"
+    ];
+  };
+
+  telecom_5g_bladerf = {
+    description = "5G SA on a bladeRF: srsRAN Project bladeRF fork with its SoapyBladeRF variant, Open5GS core, and the telecom utility set (telecom_5G_bladerf image).";
+    category = "Telecom";
+    prerequisites = [
+      "libbladeRF"
+      "soapysdr-with-plugins-bladerf-srsran"
+      "uhd"
+      "soapyuhd"
+      "lksctp-tools"
+    ];
+    packages = [
+      # The bladeRF-specific radio path replaces the stock SoapyBladeRF here;
+      # srsRAN Project speaks UHD only, so the bladeRF is reached through
+      # SoapyUHD's UHD-side bridge (uhd + soapyuhd).
+      "libbladeRF"
+      "soapysdr-with-plugins-bladerf-srsran"
+      "uhd"
+      "soapyuhd"
+      "lksctp-tools"
+      # 5G SA RAN + core
+      "srsran-project-bladerf"
+      "open5gs"
+      # telecom_utils tools the image inherits
+      "python3Packages.pycrate"
+      "cryptomobile"
+      "pysim"
+      "pysctp"
+      "sysmo-usim-tool"
+      "scat"
+      "sigploit"
+      "modmobmap"
+      "bromelia"
+      "py5sig"
+      # Analysis extras of the image
+      "wireshark"
+      "wireshark-cli"
+      "telecom-wireshark-dissectors"
+      "nmap"
+      "jupyter"
+    ];
     missing = [
       "jss7 (Java SS7 stack, 17-module Maven build; its dependency closure can't be fetched inside the Nix sandbox)"
     ];

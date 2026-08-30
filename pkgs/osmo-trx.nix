@@ -1,5 +1,6 @@
 # osmo-trx: SDR transceiver for OsmoBTS (Osmocom GSM). Autotools; built with the
-# UHD device backend and SSE enabled on x86_64.
+# UHD device backend and the SIMD path of the host: SSE on x86_64, NEON on
+# aarch64 (both are upstream configure options).
 { lib, stdenv, fetchFromGitHub, autoreconfHook, pkg-config
 , libosmocore, fftwFloat, boost, uhd }:
 
@@ -17,14 +18,17 @@ stdenv.mkDerivation {
   nativeBuildInputs = [ autoreconfHook pkg-config ];
   buildInputs = [ libosmocore fftwFloat boost uhd ];
 
-  configureFlags = [ "--with-uhd" "--with-sse" ];
+  # --with-neon is for 32-bit ARM (it adds -mfpu=neon, which the aarch64 gcc
+  # rejects); on aarch64 build the portable C path.
+  configureFlags = [ "--with-uhd" ]
+    ++ lib.optionals stdenv.hostPlatform.isx86_64 [ "--with-sse" ];
   env.NIX_CFLAGS_COMPILE = "-Wno-error";
 
   meta = {
     description = "SDR transceiver for OsmoBTS (Osmocom GSM base station)";
     homepage = "https://osmocom.org/projects/osmotrx";
     license = lib.licenses.agpl3Plus;
-    platforms = [ "x86_64-linux" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
     mainProgram = "osmo-trx-uhd";
   };
 }

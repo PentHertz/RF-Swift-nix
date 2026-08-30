@@ -17,7 +17,14 @@ let
   backends = builtins.filter (p: lib.meta.availableOn stdenv.hostPlatform p)
     [ libhydrasdr harogic-htra-sdk signalhound-sdk ];
 in
-urh.overrideAttrs (old: {
+# `USRPSupport` is a nixpkgs function argument (it adds uhd to buildInputs so
+# URH's usrp Cython extension compiles); it defaults off, which is why the USRP
+# backend was missing. Flip it with `.override` before overrideAttrs swaps in the
+# fork source. The fork's other native backends already have their libs from the
+# base derivation (airspy, bladerf, hackrf, limesdr/limesuite, plutosdr/libiio,
+# rtlsdr) or from `backends` below (hydrasdr, harogic, signalhound). sdrplay is
+# left out: its API is proprietary and not in nixpkgs.
+(urh.override { USRPSupport = true; }).overrideAttrs (old: {
   pname = "urh-ng";
   version = "unstable-penthertz";
   src = fetchFromGitHub {

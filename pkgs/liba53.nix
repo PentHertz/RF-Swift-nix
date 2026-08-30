@@ -27,6 +27,7 @@ stdenv.mkDerivation {
     description = "A5/1, A5/3 and GEA GSM cipher library (OpenBTS dependency)";
     homepage = "https://github.com/PentHertz/liba53";
     license = lib.licenses.gpl2Plus;
-    platforms = [ "x86_64-linux" ];
+    # Plain C, no arch-specific code: x86_64 and aarch64 (OpenBTS on arm64).
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
   };
 }
