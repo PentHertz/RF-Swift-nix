@@ -324,6 +324,7 @@
     ];
     packages = [
       # Runtime SDR device support (SoapySDR modules + device tools).
+      "rfswift-udev-rules"
       "soapysdr-with-plugins"
       "hackrf"
       "rtl-sdr-osmocom"
