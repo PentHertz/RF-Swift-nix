@@ -10,11 +10,10 @@
 # built with JDK 11 - the oldest LTS in this pin and the safest for the legacy
 # RestComm code.
 #
-# NOTE: mvnHash below is a placeholder. The Maven dependency closure is large
-# and its fetch is the one step this project's CI sandbox cannot complete on its
-# disk quota; run a real `nix build .#pkg-jss7` once, paste the hash Nix prints,
-# and it is pinned for everyone (the same "pin on a real machine" flow the
-# vendor SDKs use). The derivation itself evaluates and is correct.
+# NOTE: mvnHash below is pinned from a real `nix build .#pkg-jss7` (the Maven
+# closure is fetched once into a fixed-output derivation and hashed). If the tree
+# or the maven pin changes, regenerate it the same way: set mvnHash to
+# lib.fakeHash, build, and paste the hash Nix prints.
 { lib, maven, jdk11, fetchFromGitHub }:
 
 maven.buildMavenPackage {
@@ -31,8 +30,7 @@ maven.buildMavenPackage {
   mvnJdk = jdk11;
   doCheck = false; # -DskipTests, matching the images.
 
-  # Replace with the hash Nix prints on the first real build (see NOTE above).
-  mvnHash = lib.fakeHash;
+  mvnHash = "sha256-D2RG8bHSSRFBJmUW2Ax39B8OU7GcO2sT7obavXmkcxs=";
 
   # jss7 is a library set, not an app: collect every module's built jar into a
   # shared java directory so downstream tooling can put them on the classpath.

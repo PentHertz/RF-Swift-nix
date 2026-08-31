@@ -1,5 +1,5 @@
 # betterleaks (betterleaks/betterleaks): Secret/credential leak scanner
-{ lib, buildGoModule, fetchFromGitHub }:
+{ lib, buildGoModule, fetchFromGitHub, git }:
 
 buildGoModule {
   pname = "betterleaks";
@@ -13,6 +13,10 @@ buildGoModule {
   };
 
   vendorHash = "sha256-Nr6l1AULi6pjUCy4RVQZT02Kd9yRkJLZHWCbWpCoDDY=";
+
+  # detect_test.go's TestFromGit / TestFromGitStaged shell out to `git`, which is
+  # absent from the sandbox PATH by default: add it for the check phase.
+  nativeCheckInputs = [ git ];
 
   meta = {
     description = "Secret/credential leak scanner";

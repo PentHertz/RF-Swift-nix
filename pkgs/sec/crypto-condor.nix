@@ -13,7 +13,10 @@ python3Packages.buildPythonApplication rec {
     hash = "sha256-B+CTJpDXOGgVeUHSBKxWKzHGQcAtdgQUW1w+NVq4XlU=";
   };
 
-  build-system = with python3Packages; [ setuptools ];
+  # Upstream builds with poetry-core (build-backend = poetry.core.masonry.api),
+  # not setuptools; declaring setuptools makes the PEP 517 build fail with
+  # "Backend 'poetry.core.masonry.api' is not available."
+  build-system = with python3Packages; [ poetry-core ];
   dependencies = with python3Packages; [
     attrs cffi cryptography lief protobuf pycryptodome strenum typer
   ];

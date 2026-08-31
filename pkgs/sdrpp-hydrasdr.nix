@@ -105,6 +105,17 @@ in
       substituteInPlace core/src/version.h \
         --replace-quiet "1.3.0" "unstable-hydrasdr"
     fi
+    # The GLFW window title and credits dialog embed __DATE__/__TIME__. A
+    # reproducible Nix build normalizes those macros via SOURCE_DATE_EPOCH, so
+    # SDR++ shows a fixed, misleading "Built at ... 1987" instead of a real date.
+    # Drop the build-date suffix; VERSION_STR already identifies the build.
+    for f in core/backends/glfw/backend.cpp core/src/gui/dialogs/credits.cpp; do
+      if [ -f "$f" ]; then
+        substituteInPlace "$f" \
+          --replace-quiet '"SDR++ v" VERSION_STR " (Built at " __TIME__ ", " __DATE__ ")"' \
+          '"SDR++ v" VERSION_STR'
+      fi
+    done
   '' + lib.optionalString withHarogic ''
     # harogic_source expects the SDK at /opt/htraapi (the vendor installer's
     # layout); point it at the Nix package.

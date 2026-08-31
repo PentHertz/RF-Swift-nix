@@ -18,6 +18,13 @@ rustPlatform.buildRustPackage {
 
   cargoLock.lockFile = ./voipire-Cargo.lock;
 
+  # Upstream ships no Cargo.lock, but cargoSetupPostPatchHook insists src contain
+  # one that matches the vendored deps ("Missing Cargo.lock from src"). Drop the
+  # pinned lock into the source tree so the consistency check passes.
+  postPatch = ''
+    cp ${./voipire-Cargo.lock} Cargo.lock
+  '';
+
   meta = {
     description = "RTP/VoIP eavesdropping tool (Rust)";
     homepage = "https://github.com/CR-DMcDonald/voipire";

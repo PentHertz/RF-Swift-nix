@@ -652,13 +652,29 @@
     };
     version = "2.7.4";
   };
-  nokogiri = {
-    dependencies = ["racc"];
+  mini_portile2 = {
     groups = ["default" "test"];
     platforms = [];
     source = {
       remotes = ["https://rubygems.org"];
-      sha256 = "13qsqdvwdnykaja86ks2lwyb828j5dv5rpakg82hbr3d99jgns8j";
+      sha256 = "12f2830x7pq3kj0v8nz0zjvaw02sv01bqs1zwdrc04704kwcgmqc";
+      type = "gem";
+    };
+    version = "2.8.9";
+  };
+  nokogiri = {
+    # The ruby-platform gem compiles its C extension via mini_portile2 (which its
+    # extconf requires even under --use-system-libraries), so it must be in the
+    # gem closure; the upstream lock only pins precompiled platform variants.
+    dependencies = ["mini_portile2" "racc"];
+    groups = ["default" "test"];
+    platforms = [];
+    source = {
+      remotes = ["https://rubygems.org"];
+      # Hash of the ruby-platform gem (nokogiri-1.19.4.gem, compiled from source
+      # against system libxml2); the previous value was a platform-specific
+      # variant's hash and mismatched the file the fetcher actually downloads.
+      sha256 = "1d9safb4dly6qmc2g06444l0zifby52yy6j1a5fa1g4j3ihm3jah";
       type = "gem";
     };
     version = "1.19.4";
@@ -1141,7 +1157,9 @@
     platforms = [];
     source = {
       remotes = ["https://rubygems.org"];
-      sha256 = "0z4hnxpl0m03lbir9mbrxyzxxirgark9ankphp1blypx7v9ggcfq";
+      # Ruby-platform gem hash (see nokogiri above); the recorded value was a
+      # platform-specific variant and mismatched the downloaded file.
+      sha256 = "13nh4kd96d28dv3habjv2fiap30ccb73lz8mqx5d0834jl3fcvwm";
       type = "gem";
     };
     version = "2.9.6";

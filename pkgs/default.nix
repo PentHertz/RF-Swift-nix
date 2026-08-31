@@ -265,13 +265,19 @@ RULES
   rtl_433 = pkgs.rtl_433.override { inherit soapysdr-with-plugins; };
   satdump = pkgs.satdump.overrideAttrs (old: {
     buildInputs = (old.buildInputs or [ ]) ++ [ limesuite uhd boost soapysdr-with-plugins ];
+    # satdump's SoapySDR source plugin is OFF by default (upstream marks it "not
+    # recommended" as it overlaps the native plugins), so buildInputs alone does
+    # not produce it. Enable it explicitly so the Soapy-only devices in
+    # soapysdr-with-plugins are reachable; limesdr/usrp plugins are ON already.
+    cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DPLUGIN_SOAPY_SDR_SUPPORT=ON" ];
     # Fail the build, not the user's session, if one of the extra plugins
     # silently stops being configured.
     doInstallCheck = true;
     installCheckPhase = ''
       runHook preInstallCheck
       for p in limesdr_sdr_support usrp_sdr_support soapy_sdr_support; do
-        test -e "$out/lib/satdump/plugins/$p.so" || { echo "satdump: $p not built" >&2; exit 1; }
+        # CMake gives shared plugins a lib prefix (liblimesdr_sdr_support.so).
+        test -e "$out/lib/satdump/plugins/lib$p.so" || { echo "satdump: $p not built" >&2; exit 1; }
       done
       runHook postInstallCheck
     '';

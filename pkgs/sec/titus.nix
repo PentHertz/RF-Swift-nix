@@ -1,5 +1,5 @@
 # titus (praetorian-inc/titus): TLS/certificate reconnaissance tool (Praetorian)
-{ lib, buildGoModule, fetchFromGitHub }:
+{ lib, buildGoModule, fetchFromGitHub, git }:
 
 buildGoModule {
   pname = "titus";
@@ -13,6 +13,10 @@ buildGoModule {
   };
 
   vendorHash = "sha256-1kJeOd9laPbGBQP4hDKg5t4rVy0NqUG4QZj9LupV7+c=";
+
+  # The clone-enumerator tests shell out to `git init` (git_test.go), which is
+  # absent from the sandbox PATH by default: add it for the check phase.
+  nativeCheckInputs = [ git ];
 
   meta = {
     description = "TLS/certificate reconnaissance tool (Praetorian)";

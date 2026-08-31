@@ -43,7 +43,9 @@ stdenv.mkDerivation {
     # BeEF resolves its own root from realpath(__FILE__), so it must run its own
     # launcher script; the bundlerEnv Ruby supplies the gem closure. chdir keeps
     # relative config/extension paths working when started from anywhere.
-    makeWrapper ${gems}/bin/ruby $out/bin/beef \
+    # bundlerEnv's own bin/ holds only the gems' executables (no `ruby`); the
+    # gem-aware interpreter is its `wrappedRuby`.
+    makeWrapper ${gems.wrappedRuby}/bin/ruby $out/bin/beef \
       --add-flags "$out/share/beef/beef" \
       --chdir "$out/share/beef" \
       --prefix PATH : ${lib.makeBinPath [ nodejs espeak-ng ]}

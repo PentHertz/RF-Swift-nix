@@ -78,6 +78,20 @@
           });
         };
 
+      # django-q2's test suite has date-/DST-sensitive scheduler tests and a
+      # timing-sensitive result-hook test that fail nondeterministically on this
+      # pin (e.g. `assert date(2026,10,31) == date(2026,10,30)`), which breaks the
+      # android/mobsf environment build depending on the calendar date it runs on.
+      # It is pulled in as a dependency (via mobsf), not tested by us, so skip its
+      # checks. Applies on every platform.
+      djangoQ2Overlay = final: prev: {
+        pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
+          (pyfinal: pyprev: {
+            django-q2 = pyprev.django-q2.overridePythonAttrs (_: { doCheck = false; });
+          })
+        ];
+      };
+
       # Allow unfree so the few tools that need it (and any vendor bits we add
       # later) resolve.
       pkgsFor = system: import nixpkgs {
@@ -89,7 +103,7 @@
           # android buildEnv fails even though a shallow devShell eval passes.
           android_sdk.accept_license = true;
         };
-        overlays = [ pyqtNoWebengineOverlay ];
+        overlays = [ pyqtNoWebengineOverlay djangoQ2Overlay ];
       };
 
       lib = nixpkgs.lib;
@@ -242,7 +256,7 @@
               allowUnfree = true;
               android_sdk.accept_license = true;
             };
-            overlays = [ self.overlays.default pyqtNoWebengineOverlay ];
+            overlays = [ self.overlays.default pyqtNoWebengineOverlay djangoQ2Overlay ];
           };
           # The reusable overlay cannot carry the separate nixpkgs-py310 input.
           # Merge customFor here so user-facing names such as `mirage` and
