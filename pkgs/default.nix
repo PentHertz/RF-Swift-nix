@@ -44,11 +44,15 @@ with pkgs;
   # device is reachable without root.
   nanovna-saver = pkgs.nanovna-saver.overrideAttrs (o: {
     postInstall = (o.postInstall or "") + ''
-      install -Dm444 /dev/stdin $out/lib/udev/rules.d/70-nanovna.rules <<'RULES'
+      # Write the rule directly; `install -Dm444 /dev/stdin` fails on BSD/macOS
+      # ("skipping file '/dev/stdin', as it was replaced while being copied").
+      mkdir -p $out/lib/udev/rules.d
+      cat > $out/lib/udev/rules.d/70-nanovna.rules <<'RULES'
 # NanoVNA - installed by RF Swift (nix engine)
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", MODE="0666", TAG+="uaccess"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="0483", MODE="0666", TAG+="uaccess"
 RULES
+      chmod 0444 $out/lib/udev/rules.d/70-nanovna.rules
     '';
   });
 

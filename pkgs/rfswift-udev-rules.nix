@@ -13,7 +13,12 @@
 { runCommand }:
 
 runCommand "rfswift-udev-rules" { } ''
-  install -Dm444 /dev/stdin $out/lib/udev/rules.d/70-rfswift-devices.rules <<'RULES'
+  # Write the rules file directly rather than piping it through `install
+  # -Dm444 /dev/stdin`: BSD/macOS install rejects /dev/stdin ("skipping file
+  # '/dev/stdin', as it was replaced while being copied") and fails the build,
+  # while GNU install on Linux accepts it. cat + chmod behaves the same on both.
+  mkdir -p $out/lib/udev/rules.d
+  cat > $out/lib/udev/rules.d/70-rfswift-devices.rules <<'RULES'
 # RF Swift consolidated device rules - installed by RF Swift (nix engine)
 # Grant the local user access (uaccess) and a permissive mode as a fallback.
 
@@ -96,4 +101,5 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="16c0", ATTR{idProduct}=="05dc", MODE="0666", 
 SUBSYSTEM=="usb", ATTR{idVendor}=="1781", ATTR{idProduct}=="0c9f", MODE="0666", TAG+="uaccess"
 SUBSYSTEM=="usb", ATTR{idVendor}=="03eb", ATTR{idProduct}=="2104", MODE="0666", TAG+="uaccess"
 RULES
+  chmod 0444 $out/lib/udev/rules.d/70-rfswift-devices.rules
 ''
