@@ -1,8 +1,10 @@
-# RF-Swift-nix
+# ❄️ RF-Swift-nix
 
 Current development version: **v1.0.0-dev**, built from `main`.
 
 Reproducible RF, hardware and security tool environments for [RF Swift](https://github.com/PentHertz/RF-Swift), powered by the Nix package manager.
+
+This is RF Swift's offensive Nix repo: a curated catalog of RF, hardware and offensive-security environments (Active Directory, Wi-Fi, RFID/NFC, Bluetooth, SDR, reversing, automotive, OSINT, Android and more). Use it standalone with plain Nix, or drive it through RF Swift for the full experience: automatic hardware access, OpenGL on non-NixOS hosts, udev rules, lazy on-demand builds and the shared binary cache.
 
 This repository is to the `nix` engine what [RF-Swift-images](https://github.com/PentHertz/RF-Swift-images) is to the Docker engine: it holds the definitions of every environment ("image") and the packaging for the tools that go in them. The RF Swift binary reads `catalog.json` from here (or a pinned release of it) to know what environments exist, and evaluates this flake to build them.
 
@@ -31,7 +33,7 @@ Cache population is split into independent amd64, native arm64, and
 QEMU-backed riscv64 workflows. Each uploads raw logs plus JSON/Markdown problem
 reports, and one architecture failing cannot stop either of the others.
 
-## Use it directly with Nix
+## ❄️ Use it directly with Nix
 
 ```bash
 # List what the flake exposes
@@ -45,6 +47,22 @@ nix profile install github:PentHertz/RF-Swift-nix#rfid
 
 # Build a single RF Swift tool
 nix build github:PentHertz/RF-Swift-nix#pkg-readsb
+```
+
+Or consume it as a flake input from your own `flake.nix`:
+
+```nix
+{
+  inputs.rfswift-nix.url = "github:PentHertz/RF-Swift-nix";
+
+  outputs = { self, nixpkgs, rfswift-nix, ... }:
+    let system = "x86_64-linux"; in {
+      # pull an environment's dev shell straight into yours
+      devShells.${system}.default = rfswift-nix.devShells.${system}.sdr_light;
+      # or expose a single RF Swift tool as a package
+      packages.${system}.readsb = rfswift-nix.packages.${system}.pkg-readsb;
+    };
+}
 ```
 
 Or, the RF Swift way:
@@ -80,7 +98,7 @@ SDR++ (`sdrpp-hydrasdr`) is built with every device source RF Swift's images shi
 
 Native tools run as the user, so SDR/RFID hardware needs the udev rules the packages ship (`lib/udev/rules.d`, `etc/udev/rules.d`) installed on the host: `rfswift nix udev <env>` collects them from the environment and installs them.
 
-## Environments
+## 📡 Environments
 
 Run `rfswift nix catalog` or `nix eval .#catalog` for the live list. At a glance:
 
@@ -115,7 +133,7 @@ To reproduce CI's build-and-command check for one closure locally, run
 
 A package string is an attribute path into `pkgs` (for example `gnuradioPackages.osmosdr`), or the name of one of RF Swift's own derivations in `pkgs/`, which take priority. Anything unavailable on a given platform is dropped at evaluation with a trace, so one missing tool never breaks the whole shell.
 
-## Packaging tools (`pkgs/`)
+## 📦 Packaging tools (`pkgs/`)
 
 Most RF Swift tools are in nixpkgs. The rest live in `pkgs/`, in three flavours: plain source builds, forks (built by overriding a nixpkgs source), and proprietary vendor binaries (`autoPatchelfHook`). New source derivations ship with a placeholder hash you pin on the first build. See [`pkgs/README.md`](pkgs/README.md).
 

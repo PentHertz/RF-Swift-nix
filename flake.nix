@@ -90,13 +90,15 @@
             # hook (e.g. `assert date(2026,10,31) == date(2026,10,30)`); django-q2
             # comes in via mobsf (android). The whole suite is unreliable here.
             django-q2 = pyprev.django-q2.overridePythonAttrs (_: { doCheck = false; });
-            # test_acquire_cancelled[asyncio+eager] is a CapacityLimiter timing
-            # race ("second borrower failed to acquire the limiter") that fails
-            # under CI load; anyio underpins the httpx/jupyter stack that angr and
-            # the jupyter tooling pull into several environments. Drop just it.
-            anyio = pyprev.anyio.overridePythonAttrs (o: {
-              disabledTests = (o.disabledTests or [ ]) ++ [ "test_acquire_cancelled" ];
-            });
+            # anyio's async suite has several timing-sensitive checks that race
+            # under CI load and fail nondeterministically. It started with
+            # test_acquire_cancelled (a CapacityLimiter "second borrower failed to
+            # acquire the limiter" race), but disabling that one just moved the
+            # failure to other checks that now flake on different Python versions
+            # build-to-build. anyio is a pinned nixpkgs dep we consume (it
+            # underpins the httpx/jupyter stack pulled into many environments),
+            # not code we develop, so skip the whole check phase like django-q2.
+            anyio = pyprev.anyio.overridePythonAttrs (_: { doCheck = false; });
           })
         ];
       };
