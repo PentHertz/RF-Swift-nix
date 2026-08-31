@@ -78,16 +78,25 @@
           });
         };
 
-      # django-q2's test suite has date-/DST-sensitive scheduler tests and a
-      # timing-sensitive result-hook test that fail nondeterministically on this
-      # pin (e.g. `assert date(2026,10,31) == date(2026,10,30)`), which breaks the
-      # android/mobsf environment build depending on the calendar date it runs on.
-      # It is pulled in as a dependency (via mobsf), not tested by us, so skip its
-      # checks. Applies on every platform.
-      djangoQ2Overlay = final: prev: {
+      # Python dependencies whose upstream test suites fail nondeterministically
+      # on this nixpkgs pin - timing- or calendar-sensitive checks that break the
+      # build depending on the runner and the date, not on our code. Skip only the
+      # offending checks so these deps stop taking whole environments down. Applies
+      # on every platform.
+      flakyPyTestsOverlay = final: prev: {
         pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
           (pyfinal: pyprev: {
+            # date-/DST-sensitive scheduler tests plus a timing-sensitive result
+            # hook (e.g. `assert date(2026,10,31) == date(2026,10,30)`); django-q2
+            # comes in via mobsf (android). The whole suite is unreliable here.
             django-q2 = pyprev.django-q2.overridePythonAttrs (_: { doCheck = false; });
+            # test_acquire_cancelled[asyncio+eager] is a CapacityLimiter timing
+            # race ("second borrower failed to acquire the limiter") that fails
+            # under CI load; anyio underpins the httpx/jupyter stack that angr and
+            # the jupyter tooling pull into several environments. Drop just it.
+            anyio = pyprev.anyio.overridePythonAttrs (o: {
+              disabledTests = (o.disabledTests or [ ]) ++ [ "test_acquire_cancelled" ];
+            });
           })
         ];
       };
@@ -103,7 +112,7 @@
           # android buildEnv fails even though a shallow devShell eval passes.
           android_sdk.accept_license = true;
         };
-        overlays = [ pyqtNoWebengineOverlay djangoQ2Overlay ];
+        overlays = [ pyqtNoWebengineOverlay flakyPyTestsOverlay ];
       };
 
       lib = nixpkgs.lib;
@@ -256,7 +265,7 @@
               allowUnfree = true;
               android_sdk.accept_license = true;
             };
-            overlays = [ self.overlays.default pyqtNoWebengineOverlay djangoQ2Overlay ];
+            overlays = [ self.overlays.default pyqtNoWebengineOverlay flakyPyTestsOverlay ];
           };
           # The reusable overlay cannot carry the separate nixpkgs-py310 input.
           # Merge customFor here so user-facing names such as `mirage` and
