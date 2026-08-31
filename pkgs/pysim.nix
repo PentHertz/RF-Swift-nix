@@ -6,14 +6,19 @@ let
 in
 python3Packages.buildPythonApplication {
   pname = "pysim";
-  version = "unstable";
+  version = "0-unstable-2026-04-22";
   pyproject = true;
 
+  # Pin an exact commit, never a branch name: fetchFromGitHub is a fixed-output
+  # derivation, so `rev = "master"` breaks with a hash mismatch as soon as
+  # upstream master moves (which is exactly what took the telecom cache build
+  # down). Bump rev and hash together via `nix flake prefetch
+  # github:osmocom/pysim/<rev>`.
   src = fetchFromGitHub {
     owner = "osmocom";
     repo = "pysim";
-    rev = "master";
-    hash = "sha256-O4Lim+mVCdu6ETM3zZqEcOj23KTPmZanYJBi60oMQW8=";
+    rev = "d4717bd014901d41863ccd408a3ea538d6fc1fc6";
+    hash = "sha256-NlF63uYSUFhNrkT0oV2P46cdlL5MAJ69CObpqJR/McI=";
   };
 
   build-system = pick [ "setuptools" ];

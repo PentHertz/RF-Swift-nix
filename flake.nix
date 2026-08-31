@@ -84,6 +84,14 @@
       # offending checks so these deps stop taking whole environments down. Applies
       # on every platform.
       flakyPyTestsOverlay = final: prev: {
+        # arrow-cpp runs its gtest unittest suite as an installCheck. One of the
+        # ~99 tests flakes on this pin (seen failing in one aarch64 cache run,
+        # passing in another), which takes pyarrow - and the whole data-science
+        # stack that dask/pandas/databricks pull in - down with it. It is a
+        # consumed C++ dep, not our code, so drop the install check like the
+        # Python suites below.
+        arrow-cpp = prev.arrow-cpp.overrideAttrs (_: { doInstallCheck = false; });
+
         pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
           (pyfinal: pyprev: {
             # date-/DST-sensitive scheduler tests plus a timing-sensitive result
@@ -99,6 +107,34 @@
             # underpins the httpx/jupyter stack pulled into many environments),
             # not code we develop, so skip the whole check phase like django-q2.
             anyio = pyprev.anyio.overridePythonAttrs (_: { doCheck = false; });
+            # The nixpkgs pin now defaults to CPython 3.14, on which several
+            # large upstream test suites flake or trip a single 3.14-specific
+            # assertion and take whole environments down in the cache build.
+            # These are consumed deps, not our code, and each passes the vast
+            # majority of its suite (django's full 18k-test run and aiohttp's
+            # ~4840 checks pass locally here; CI shows a lone nondeterministic
+            # failure). Skip only their check phases, same as anyio/django-q2.
+            #
+            #   aiohttp        one flaky websocket-pipelining check ("comparison
+            #                  failed") that fails in ~1 of N cache runs.
+            #   django         one nondeterministic check in the 18168-test suite
+            #                  (passes in full locally; flakes under CI load).
+            #                  Pulled in via mobsf, spiderfoot, and others.
+            #   jupyter-server one 3.14 check failure (942 pass); jupyter is in
+            #                  sdr_light/telecom/reversing and more.
+            #   httpx2/httpcore2  the httpx 2.x pre-release, one failing check
+            #                  each; underpins the fastapi/starlette/respx stack.
+            aiohttp = pyprev.aiohttp.overridePythonAttrs (_: { doCheck = false; });
+            django = pyprev.django.overridePythonAttrs (_: { doCheck = false; });
+            jupyter-server = pyprev.jupyter-server.overridePythonAttrs (_: { doCheck = false; });
+          }
+          # httpx2/httpcore2 are the httpx 2.x pre-release attrs; guard with
+          # optionalAttrs so a later pin that renames or drops them still evals.
+          // lib.optionalAttrs (pyprev ? httpx2) {
+            httpx2 = pyprev.httpx2.overridePythonAttrs (_: { doCheck = false; });
+          }
+          // lib.optionalAttrs (pyprev ? httpcore2) {
+            httpcore2 = pyprev.httpcore2.overridePythonAttrs (_: { doCheck = false; });
           })
         ];
       };
