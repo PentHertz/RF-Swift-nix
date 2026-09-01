@@ -1,0 +1,22 @@
+name: build-and-cache
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_DEV }}   # pull+push on dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - run: nix profile install nixpkgs#attic-client
+      # PULL: wire the dev cache in as a substituter before building.
+      - run: ./nix-cache-infra/scripts/use-cache.sh dev
+      # BUILD: reuses anything already in dev.
+      - id: build
+        run: |
+          outs=$(nix build .#packages.x86_64-linux.reversing \
+                            .#packages.x86_64-linux.wifi \
+                            --no-link --print-out-paths)
+          printf 'outs<<EOF\n%s\nEOF\n' "$outs" >> "$GITHUB_OUTPUT"
+      # PUSH: upload the newly built closures.
+      - run: echo "${{ steps.build.outputs.outs }}" | xargs ./nix-cache-infra/scripts/push-to-cache.sh dev
