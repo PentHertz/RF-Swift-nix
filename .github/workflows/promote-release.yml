@@ -1,0 +1,70 @@
+# On a version tag, copy every environment closure from the dev cache to the
+# release cache (https://<releaseHost>/release), which is what RF Swift users
+# consume. Nothing is rebuilt here: the dev cache is wired in as a substituter
+# first, so `nix build` only downloads what build-and-cache.yml already pushed.
+#
+# Repository secrets (see nix-cache-infra/SETUP.md, "Caches + tokens"):
+#   ATTIC_TOKEN_RELEASE    pull dev + push release token (mint-token.sh ci-rel)
+#   CACHE_PUBLIC_KEY_DEV   dev cache public key, e.g. dev:BASE64... (attic cache info dev)
+name: promote-release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: promote-release-${{ github.ref }}
+
+env:
+  SYSTEM: x86_64-linux
+  INFRA_DIR: nix-cache-infra
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      envs: ${{ steps.catalog.outputs.envs }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: catalog
+        run: echo "envs=$(jq -c '[.environments[].name]' catalog.json)" >> "$GITHUB_OUTPUT"
+
+  promote:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        env: ${{ fromJSON(needs.prepare.outputs.envs) }}
+    env:
+      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_RELEASE }}
+      DEV_PUBLIC_KEY: ${{ secrets.CACHE_PUBLIC_KEY_DEV }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            max-jobs = auto
+            cores = 0
+            trusted-users = root runner
+      - name: Install attic client
+        run: nix profile install nixpkgs#attic-client
+
+      # The release token can pull dev, so the build below is a download.
+      - name: Use dev cache (pull)
+        run: ./${INFRA_DIR}/scripts/use-cache.sh dev
+
+      - name: Realise ${{ matrix.env }} from dev
+        id: build
+        run: |
+          out=$(nix build ".#packages.${SYSTEM}.${{ matrix.env }}" \
+                  --no-link --print-out-paths --print-build-logs)
+          echo "out=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Promote ${{ matrix.env }} to release
+        run: ./${INFRA_DIR}/scripts/promote.sh "${{ steps.build.outputs.out }}"

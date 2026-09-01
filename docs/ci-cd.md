@@ -44,6 +44,25 @@ flowchart LR
     X --> U[RF Swift users download cached closures]
 ```
 
+## Self-hosted attic cache (dev / release)
+
+Alongside Cachix, two workflows feed the self-hosted attic binary cache
+described in `nix-cache-infra/` (`nixcache-dev.penthertz.com` for `dev`,
+`nixcache.penthertz.com` for `release`; hostnames come from
+`nix-cache-infra/settings.nix`, CI only supplies tokens):
+
+- `build-and-cache.yml` runs on every branch push and `v*` tag. Each
+  environment pulls from `dev`, uploads store paths while it builds
+  (`attic watch-store`), and pushes its closure when done. A failed
+  environment still leaves its finished dependencies in the cache. Fork pull
+  requests build without the cache (no secrets).
+- `promote-release.yml` runs on `v*` tags and copies every environment closure
+  from `dev` to `release` without rebuilding.
+
+Secrets: `ATTIC_TOKEN_DEV` (pull+push dev), `ATTIC_TOKEN_RELEASE` (pull dev,
+push release), `CACHE_PUBLIC_KEY_DEV` (output of `attic cache info dev`).
+Minting them is covered in `nix-cache-infra/SETUP.md`, section 6.
+
 ## One-time GitHub setup
 
 1. Create a public Cachix cache, for example `rfswift`.
