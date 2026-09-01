@@ -11,7 +11,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "josevcm";
     repo = "nfc-laboratory";
-    rev = "master";
+    rev = "4882c8c1e708fd79aa841b498f511f008db345d6";
     hash = "sha256-cVka9go8lLJT15NKNuyzns4xtPEO6C5+1w6DRNnHuRo=";
   };
 

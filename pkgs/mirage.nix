@@ -25,7 +25,7 @@ buildPythonApplication {
   src = fetchFromGitHub {
     owner = "RCayre";
     repo = "mirage";
-    rev = "master";
+    rev = "b6cd39eb779a94a11ebf9f7cba4e77435d885434";
     hash = "sha256-IY6Y2djLFtGb8MGI7u8IHC3vnEF3s5xh5bdFU7Xcmc4=";
   };
 

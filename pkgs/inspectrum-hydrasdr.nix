@@ -7,7 +7,7 @@ inspectrum.overrideAttrs (old: {
   src = fetchFromGitHub {
     owner = "hydrasdr";
     repo = "inspectrum";
-    rev = "master";
+    rev = "ba807f05ddff42b02c7df3a7f9544374dbb519e6";
     hash = "sha256-/l3aLeXy4Ll3cC5Np6WuPJbTFeZK23qGSDNFOGyRsgI=";
   };
   # nixpkgs' postPatch rewrites a specific cmake_minimum_required line that the

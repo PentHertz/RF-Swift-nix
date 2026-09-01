@@ -10,7 +10,7 @@
   src = fetchFromGitHub {
     owner = "PentHertz";
     repo = "gr-osmosdr_resolute";
-    rev = "master";
+    rev = "206fff787dcac512399189915c0f7f1c0f020223";
     hash = "sha256-lVaVQ3hNf7UhbmXsw9FQSwfVXrTeKa5bYSRxMxJFRmw=";
   };
   buildInputs = (old.buildInputs or [ ]) ++ [ libhydrasdr ];

@@ -8,7 +8,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "Montimage";
     repo = "5Greplay";
-    rev = "master";
+    rev = "ac4e28d42462b94cceaabf716a7bda4b3907de5f";
     hash = "sha256-c3lETZHb4ppB28P8HD+w9yz67t5g8J1jToTu4Trgq94=";
   };
 

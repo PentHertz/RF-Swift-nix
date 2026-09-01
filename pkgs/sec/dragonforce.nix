@@ -9,7 +9,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "FlUxIuS";
     repo = "dragonforce";
-    rev = "master";
+    rev = "71a06ecece9657b23c28cec516df5391f5ab33de";
     hash = "sha256-FukcTuOGE2kOY5UIyS0HAQKRC/LEwxFgXrMWMQJS4c4=";
   };
 

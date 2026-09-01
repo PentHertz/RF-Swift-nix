@@ -8,7 +8,7 @@ buildGoModule {
   src = fetchFromGitHub {
     owner = "praetorian-inc";
     repo = "caeruleus";
-    rev = "main";
+    rev = "5062e97c2cbcbc1b44b5786d7c7b0e4390656c47";
     hash = "sha256-rNuHBD6ReeJDfeiWnZW8JCjJavSTntTBhmMaL1qXmVk=";
   };
 

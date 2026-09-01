@@ -16,7 +16,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "RfidResearchGroup";
     repo = "ChameleonUltra";
-    rev = "main";
+    rev = "0c1d5791b46e8ac1a87cb8e356f180b1394fb827";
     hash = "sha256-wUkw6uM+XPRgODRElJmSZM3AbD0X2balRgEVrn5V6V8=";
   };
 

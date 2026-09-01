@@ -12,7 +12,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "Pepelux";
     repo = "sippts";
-    rev = "master";
+    rev = "f0b3851f1f471a11c9ee272f76f3dfa5bec9305c";
     hash = "sha256-QAYhoeH/hEPaAPsyTD88NJjRko8IorgyFXudpp4zjZs=";
   };
 

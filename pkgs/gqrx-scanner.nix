@@ -8,7 +8,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "neural75";
     repo = "gqrx-scanner";
-    rev = "master";
+    rev = "0283ab2c9f4976e9a1e64618bacbfed926e19284";
     hash = "sha256-fbMk76lmHs6cKcDf3fI9wxK8SK2QW3eSnh1AtNxvwfs=";
   };
 

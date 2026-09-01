@@ -16,7 +16,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "FlUxIuS";
     repo = "SigPloit";
-    rev = "master";
+    rev = "1724855b10d35c467b9711c2e69609671c7cdd5b";
     hash = "sha256-fgfo83zdF1gLXVAvOZFIms8bzMddiV+yi5cDVoAnrSU=";
   };
 

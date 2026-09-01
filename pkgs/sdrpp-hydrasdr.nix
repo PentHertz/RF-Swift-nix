@@ -67,7 +67,7 @@ in
   src = fetchFromGitHub {
     owner = "hydrasdr";
     repo = "SDRPlusPlus";
-    rev = "master";
+    rev = "6a232e6fed702a294819afb06b6dbab76c92c96a";
     hash = "sha256-TD39CFO2kEZGcbu/cyGT3WVb4TbvKbj1HNon6vu+UNA=";
   };
   # The fork adds a HydraSDR source module needing libhydrasdr. On Darwin,

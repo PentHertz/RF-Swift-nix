@@ -12,7 +12,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "FluxionNetwork";
     repo = "fluxion";
-    rev = "master";
+    rev = "cac48e9850fe992502590becaeb83c148873c4f0";
     hash = "sha256-PBYBEqYi1lvTx4TTN3ZoY5t36CuNECAswM1mU6amvqc=";
   };
 

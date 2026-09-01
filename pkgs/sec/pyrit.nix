@@ -11,10 +11,20 @@ python3Packages.buildPythonApplication {
   version = "0.5.1-unstable";
   format = "setuptools";
 
+  # Pin an exact commit, never a branch name: fetchFromGitHub is a fixed-output
+  # derivation, so `rev = "master"` breaks with a hash mismatch the moment
+  # upstream master moves (which is what took the wifi cache build down). This
+  # rev is the last commit before upstream's 2026-08-31 "Restore Python 2.7
+  # APIs" churn, and is the exact tree the postPatch py2->py3 port below was
+  # written against: the later HEAD reverts the buffer-protocol code to py2
+  # (bf_getreadbuffer / PyBuffer_FromObject / 4-field PyBufferProcs), which the
+  # postPatch regexes do not match, so it must not be bumped blindly. Bump rev
+  # and hash together via `nix flake prefetch github:JPaulMora/Pyrit/<rev>` only
+  # after re-checking the postPatch still applies.
   src = fetchFromGitHub {
     owner = "JPaulMora";
     repo = "Pyrit";
-    rev = "master";
+    rev = "478df449ce48f99bc717dc6a36a51f719714eaa1";
     hash = "sha256-nc5TS4CFnG2t0JZRk9KKwIUY5Me111DShYx3k6atbUk=";
   };
 

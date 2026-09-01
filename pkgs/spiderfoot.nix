@@ -18,7 +18,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "smicallef";
     repo = "spiderfoot";
-    rev = "master";
+    rev = "0f815a203afebf05c98b605dba5cf0475a0ee5fd";
     hash = "sha256-LsaLgz+tZyTUBLxa7FoJusGgMa3sgLUMZMVPZUpvWdY=";
   };
 

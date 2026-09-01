@@ -11,7 +11,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "AdamLaurie";
     repo = "RFIDler";
-    rev = "master";
+    rev = "7206bf9e1ac8f806bcaa2287dd7093a683d84b2f";
     hash = "sha256-61hv/BZE2Ec3DtP3UDPnaj4PIbsN7DRuJA2M6/da3e8=";
   };
 

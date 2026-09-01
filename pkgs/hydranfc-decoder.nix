@@ -11,7 +11,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "hydrabus";
     repo = "hydranfc_v2_sniffer_decoder";
-    rev = "master";
+    rev = "26e11a33219394c3e157ac5457e0415a5243082a";
     hash = "sha256-LqOk/YckEWfEOH2QXMlyEWNRwH91J5Bt+RM5UXNp+eM=";
   };
 

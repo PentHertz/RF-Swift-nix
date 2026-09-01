@@ -2,7 +2,7 @@
 let pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or null) names);
 in python3Packages.buildPythonApplication {
   pname = "bloodyad"; version = "unstable"; pyproject = true;
-  src = fetchFromGitHub { owner = "CravateRouge"; repo = "bloodyAD"; rev = "main"; hash = "sha256-J4vQX8z6mqSkwnonNOVYJZGyA63p5QdIkRAiiSld6yg="; };
+  src = fetchFromGitHub { owner = "CravateRouge"; repo = "bloodyAD"; rev = "0422904acd9a3db681837acd0bbe1895f06c907e"; hash = "sha256-J4vQX8z6mqSkwnonNOVYJZGyA63p5QdIkRAiiSld6yg="; };
   # Upstream declares two console scripts differing only in case (`bloodyAD` and
   # `bloodyad`); installing both collides writing $out/bin under the macOS build
   # sandbox (and on any case-insensitive FS). Keep only the canonical bloodyAD.

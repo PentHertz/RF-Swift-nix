@@ -11,7 +11,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "sysmocom";
     repo = "sysmo-usim-tool";
-    rev = "master";
+    rev = "190c95b959c62b270efdd6c48e330cc237f179dd";
     hash = "sha256-s3b4lJjqr5TYo0hIDApFxwQtgiRpoypdBYq8PBe9Z9A=";
   };
 

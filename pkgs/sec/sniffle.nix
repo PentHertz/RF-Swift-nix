@@ -2,7 +2,7 @@
 let pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or null) names);
 in python3Packages.buildPythonApplication {
   pname = "sniffle"; version = "unstable"; format = "other";
-  src = fetchFromGitHub { owner = "nccgroup"; repo = "Sniffle"; rev = "master"; hash = "sha256-i9A+BrO6cz6nPI0Z/yTp9ehuztbhBUmZ5NakvcXQ+0I="; };
+  src = fetchFromGitHub { owner = "nccgroup"; repo = "Sniffle"; rev = "3a53f5ab21df7599ad0c46475d322603c1a54bb7"; hash = "sha256-i9A+BrO6cz6nPI0Z/yTp9ehuztbhBUmZ5NakvcXQ+0I="; };
   nativeBuildInputs = [ makeWrapper ];
   propagatedBuildInputs = pick [ "pyserial" ];
   dontCheckRuntimeDeps = true; doCheck = false;

@@ -15,7 +15,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "pentestfunctions";
     repo = "BlueDucky";
-    rev = "main";
+    rev = "8b9715cfc93a2cf58d6b8b0b00fc7de70c3fa3ae";
     hash = "sha256-k1FxPT5a+pRjy9EgwB4zmfHQgc4u23U7YBRhDE80nPI=";
   };
 

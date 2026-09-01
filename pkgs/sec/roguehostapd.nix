@@ -12,7 +12,7 @@ python3Packages.buildPythonPackage {
   src = fetchFromGitHub {
     owner = "wifiphisher";
     repo = "roguehostapd";
-    rev = "master";
+    rev = "381b373b4b3394d916e8c7a19b10d6c3c491bd13";
     hash = "sha256-rPIiIi3leUyWOIYOt10PTY1HMpwcUcvYVVyGb/jZk4E=";
   };
 

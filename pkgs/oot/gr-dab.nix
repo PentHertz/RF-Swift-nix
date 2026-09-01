@@ -11,7 +11,7 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "andrmuel";
     repo = "gr-dab";
-    rev = "master";
+    rev = "fdf26cb38ff931dcb297cc03cbe8d43f7360fbd8";
     hash = "sha256-tb6Eexsdqmwva7O6hnjuIPo8RkfZYsP22wTE2+LqzGQ=";
   };
 

@@ -1,7 +1,7 @@
 { lib, python3Packages, fetchFromGitHub, makeWrapper }:
 python3Packages.buildPythonApplication {
   pname = "wacker"; version = "unstable"; format = "other";
-  src = fetchFromGitHub { owner = "blunderbuss-wctf"; repo = "wacker"; rev = "master"; hash = "sha256-upSloZykyoTOkrijcVkWnG6/LJYnVfwke1+H6Eh4D0I="; };
+  src = fetchFromGitHub { owner = "blunderbuss-wctf"; repo = "wacker"; rev = "a10654d0c56c657a6d774f69f45b3a1bb854ebcb"; hash = "sha256-upSloZykyoTOkrijcVkWnG6/LJYnVfwke1+H6Eh4D0I="; };
   nativeBuildInputs = [ makeWrapper ];
   dontCheckRuntimeDeps = true; doCheck = false;
   installPhase = ''

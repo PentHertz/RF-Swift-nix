@@ -10,7 +10,7 @@ python3Packages.buildPythonPackage {
   src = fetchFromGitHub {
     owner = "mitshell";
     repo = "CryptoMobile";
-    rev = "master";
+    rev = "0857cbbf140c05c54688bdb2076c25eb8f3ddb89";
     hash = "sha256-GxRf+0QBmWHBEYMuBeFX9S63Nbbq8jyXF+L2Uj8VCXk=";
   };
 

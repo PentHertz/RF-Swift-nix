@@ -9,7 +9,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "aboul3la";
     repo = "Sublist3r";
-    rev = "master";
+    rev = "729d649ec5370730172bf6f5314aafd68c874124";
     hash = "sha256-nrnb3jAIHw6WXR7VLNmi1YdfMBzHEIiMlGSbrvEi6Uc=";
   };
 

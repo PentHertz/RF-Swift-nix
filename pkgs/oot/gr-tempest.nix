@@ -11,7 +11,7 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "git-artes";
     repo = "gr-tempest";
-    rev = "master";
+    rev = "9df82064515d66ca83f6cc66442ddfdeaf30af83";
     hash = "sha256-7YjW07FBV7/fgDVX9sby5JS+CfwgFX5jqKhnuUmqowA=";
   };
 

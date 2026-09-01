@@ -1,7 +1,7 @@
 { lib, stdenv, fetchFromGitHub, autoreconfHook, pkg-config, bison, flex, libnfc, readline, openssl }:
 stdenv.mkDerivation {
   pname = "mfterm"; version = "unstable";
-  src = fetchFromGitHub { owner = "4ZM"; repo = "mfterm"; rev = "master"; hash = "sha256-5qQpBeT9IX9gf9cL198iI1eSJJaweRfd0UDo7v3+L8w="; };
+  src = fetchFromGitHub { owner = "4ZM"; repo = "mfterm"; rev = "e13d373cc23c4e0b89f112b5e4e6d21f737d937e"; hash = "sha256-5qQpBeT9IX9gf9cL198iI1eSJJaweRfd0UDo7v3+L8w="; };
   nativeBuildInputs = [ autoreconfHook pkg-config bison flex ];
   buildInputs = [ libnfc readline openssl ];
   postPatch = "touch ChangeLog AUTHORS NEWS README";

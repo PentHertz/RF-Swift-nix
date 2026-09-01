@@ -10,7 +10,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "mikeryan";
     repo = "ice9-bluetooth-sniffer";
-    rev = "master";
+    rev = "788c5bce998a2d15c6b26a7d729ad81a5d28a869";
     hash = "sha256-1MM05MB9TlyjLj/LG0xZ27EQPqCyzljpagZnUfiIkog=";
   };
 

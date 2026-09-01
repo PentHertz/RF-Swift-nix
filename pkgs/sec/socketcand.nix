@@ -1,7 +1,7 @@
 { lib, stdenv, fetchFromGitHub, meson, ninja, pkg-config, libconfig }:
 stdenv.mkDerivation {
   pname = "socketcand"; version = "unstable";
-  src = fetchFromGitHub { owner = "linux-can"; repo = "socketcand"; rev = "master"; hash = "sha256-Pvh0lowK3mQLRu+TotjZS75bwztNvbY7rC3gZUSdjVA="; };
+  src = fetchFromGitHub { owner = "linux-can"; repo = "socketcand"; rev = "6dd5d33d4645ab221e8cd265c08607366e21ddf1"; hash = "sha256-Pvh0lowK3mQLRu+TotjZS75bwztNvbY7rC3gZUSdjVA="; };
   nativeBuildInputs = [ meson ninja pkg-config ];
   buildInputs = [ libconfig ];
   # SocketCAN is a Linux kernel subsystem; socketcand builds only on Linux. Declaring

@@ -10,7 +10,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "PentHertz";
     repo = "liba53";
-    rev = "master";
+    rev = "27354560dc7b554e03d40a520d41290e731193b6";
     hash = "sha256-4ahnJ4qv/QFtND69BckanIKHURkQqmfr43m+O+PlJZw=";
   };
 

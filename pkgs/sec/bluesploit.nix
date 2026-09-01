@@ -14,7 +14,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "V33RU";
     repo = "bluesploit";
-    rev = "main";
+    rev = "819e22350471d0f5a4daa9321ad4d03fd6b2c630";
     hash = "sha256-vskiKlqYya9Jmyh72/XcU/4T/1QXDg1o7BPE1cQYpTA=";
   };
 

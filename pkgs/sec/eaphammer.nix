@@ -19,7 +19,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "s0lst1c3";
     repo = "eaphammer";
-    rev = "master";
+    rev = "91e8956f640b13dbf58589430cf69b1541f9528b";
     hash = "sha256-LUqUSfM4U5adOk5yaM05wTE/47iKXiA46FzSP3peivw=";
   };
 

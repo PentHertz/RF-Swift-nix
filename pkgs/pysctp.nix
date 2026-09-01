@@ -10,7 +10,7 @@ python3Packages.buildPythonPackage {
   src = fetchFromGitHub {
     owner = "FlUxIuS";
     repo = "pysctp";
-    rev = "master";
+    rev = "d7484e885f8abc9fa30bdb7c3afa849ca49a5cd3";
     hash = "sha256-bl0iHZ8hed9FUyiTvg6cDrYVy5po+7b7lhXsn0kQirE=";
   };
 

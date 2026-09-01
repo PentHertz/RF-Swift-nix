@@ -8,7 +8,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "r4d10n";
     repo = "retrogram-soapysdr";
-    rev = "master";
+    rev = "9830bd61e4e788dad307f26505aef462ee9c3461";
     hash = "sha256-zIQgTnqAaR01ff4iVIAXjYnTyEjqx7Ao7k024tvuvpo=";
   };
 

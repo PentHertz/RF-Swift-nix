@@ -11,7 +11,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "PentHertz";
     repo = "CVE-2025-36911-exploit";
-    rev = "main";
+    rev = "1d1361fc0cd5580ad8b368590f99aa71d13cb3fb";
     hash = "sha256-6RVTi66ZPBccbheC4KAQqgZs3kJVbrVV/Jk+Xd1FbXk=";
   };
 

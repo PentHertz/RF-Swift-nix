@@ -12,7 +12,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "swisskyrepo";
     repo = "SSRFmap";
-    rev = "master";
+    rev = "290e07d75c52d68e021b6d0b4200c2a41ea20365";
     hash = "sha256-PM1ZvebrU09d1ug53wm+CeKh0jBC16Zd4KnFOfHEirI=";
   };
 

@@ -9,7 +9,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "nfc-tools";
     repo = "miLazyCracker";
-    rev = "master";
+    rev = "b4f0d35df0da8ec8f06e7a285099dbf0978d0ad2";
     hash = "sha256-e73MCVq8KXe0xvAI5WY++soON2cFekgHfRrGFD55osI=";
   };
 

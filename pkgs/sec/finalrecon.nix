@@ -3,7 +3,7 @@ let pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or nul
     deps = pick [ "requests" "beautifulsoup4" "dnspython" "aiohttp" "aiodns" "psycopg2" "tld" "ipwhois" "lxml" "icalendar" ];
 in python3Packages.buildPythonApplication {
   pname = "finalrecon"; version = "unstable"; format = "other";
-  src = fetchFromGitHub { owner = "thewhiteh4t"; repo = "FinalRecon"; rev = "master"; hash = "sha256-4iNvV+u5sSh1y0FL1vvlGjWRwgY8dOibfjdmdyGAPak="; };
+  src = fetchFromGitHub { owner = "thewhiteh4t"; repo = "FinalRecon"; rev = "b5db3a46921195bec643065c560e19741852957c"; hash = "sha256-4iNvV+u5sSh1y0FL1vvlGjWRwgY8dOibfjdmdyGAPak="; };
   nativeBuildInputs = [ makeWrapper ];
   propagatedBuildInputs = deps;
   dontCheckRuntimeDeps = true; doCheck = false;

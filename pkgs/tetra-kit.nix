@@ -9,7 +9,7 @@ stdenv.mkDerivation {
   src = fetchFromGitLab {
     owner = "larryth";
     repo = "tetra-kit";
-    rev = "master";
+    rev = "7306a08c2dc753de636aaea8187e6ac5a3a99d02";
     hash = "sha256-onrPX0iO2TNg6Fi3WboeKfgOOlW1YYv5SzC9d95/n9c=";
   };
 

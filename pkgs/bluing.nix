@@ -67,7 +67,7 @@ buildPythonApplication {
   src = fetchFromGitHub {
     owner = "fO-000";
     repo = "bluing";
-    rev = "master";
+    rev = "ef83ce2c7de9b0447e3490af511c299b135d42cc";
     hash = "sha256-Qx2Rmbmml/W4qDNrlkXYbI9JDv8Ga8eRrVtg1Bu8DYo=";
   };
 

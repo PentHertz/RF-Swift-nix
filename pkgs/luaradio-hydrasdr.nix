@@ -26,7 +26,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "hydrasdr";
     repo = "luaradio";
-    rev = "master";
+    rev = "7db1ae930f590b70715719c1f3e1cbf4308a8a88";
     hash = "sha256-+tUm/rtuwH9TGc9jdB2Zvx5yOC322CLJ0P8VSSjqk30=";
   };
 

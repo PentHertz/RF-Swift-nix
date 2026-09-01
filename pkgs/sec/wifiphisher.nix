@@ -11,7 +11,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "wifiphisher";
     repo = "wifiphisher";
-    rev = "master";
+    rev = "4ae336518bf29eed13d3b09f2ee6a16e7973c997";
     hash = "sha256-RIvyiVwcfJgOAQs9+IMnLxEcE6tMl/3RzJDkkqDvFXI=";
   };
 

@@ -13,7 +13,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "savio-code";
     repo = "fern-wifi-cracker";
-    rev = "master";
+    rev = "58ed54ef8294e4019a3f5056f1e3424ce033f3cd";
     hash = "sha256-wR6cCiwQ+HPDqJmTqS1k1NUT219ewYHzNDCMegmU0KE=";
   };
 

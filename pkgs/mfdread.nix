@@ -9,7 +9,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "zhovner";
     repo = "mfdread";
-    rev = "master";
+    rev = "b0697dcd6a424e85e119981cc5c66214d6a0d514";
     hash = "sha256-GAqHR0UcxrAedMOpvsGUYo5ESWEP9WCqznNJrMfMaWE=";
   };
 

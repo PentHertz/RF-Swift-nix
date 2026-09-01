@@ -10,7 +10,7 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "AdamLaurie";
     repo = "mphidflash";
-    rev = "master";
+    rev = "d65bedd3f564a5d91b29e06b4a5885c32780acc5";
     hash = "sha256-akQjkkbGxkurBifTZuI+iVs8O2i8MM0LgMUYztg5hzE=";
   };
 

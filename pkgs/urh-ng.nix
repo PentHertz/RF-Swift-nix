@@ -30,7 +30,7 @@ in
   src = fetchFromGitHub {
     owner = "PentHertz";
     repo = "urh-ng";
-    rev = "master";
+    rev = "0a6fe54c94a204825a78bd32d1e446da1018eb13";
     hash = "sha256-2CLg4Tn8l0VQH+gfEFrftb43g6zf/lxOpGTUniciY7c=";
   };
   # The fork's metadata requires PyQt6; make sure it is present so the Python

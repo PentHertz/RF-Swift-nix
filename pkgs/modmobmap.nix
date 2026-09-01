@@ -12,7 +12,7 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "PentHertz";
     repo = "Modmobmap";
-    rev = "master";
+    rev = "02a0b1e53138b944f09fa046ca91f83440177816";
     hash = "sha256-kYgn20ijgzDAofnEVRKXzAM67V+Pru0RT8c61Fk6I0c=";
   };
 

@@ -6,7 +6,7 @@
 let pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or null) names);
 in python3Packages.buildPythonApplication {
   pname = "drozer"; version = "unstable"; pyproject = true;
-  src = fetchFromGitHub { owner = "WithSecureLabs"; repo = "drozer"; rev = "develop"; hash = "sha256-a/CCLg2g//H3aVX6rDVXQ1w7+YCI0/hg1mitTTff4Z0="; };
+  src = fetchFromGitHub { owner = "WithSecureLabs"; repo = "drozer"; rev = "d992f6378d42680ea96ee03eff4117f150e1049c"; hash = "sha256-a/CCLg2g//H3aVX6rDVXQ1w7+YCI0/hg1mitTTff4Z0="; };
   nativeBuildInputs = [ jdk ];
   # setup.py compiles the agent helper APKs at build time by invoking the bundled
   # `d8` dexer wrapper, which ships a `#!/bin/bash` shebang. The pure Nix builder
