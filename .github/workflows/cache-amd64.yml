@@ -1,7 +1,20 @@
+# Build every RF Swift environment for x86_64-linux and publish the closures
+# to the self-hosted attic binary cache (nix-cache-infra/), `dev` cache:
+#
+#   PULL   use-cache.sh dev wires https://<devHost>/dev in as a substituter so
+#          already-cached paths are downloaded instead of rebuilt.
+#   WATCH  `attic watch-store dev` runs next to the build and uploads every
+#          store path the moment it is realised. A package failing late in an
+#          environment does not throw away the dependencies that did build.
+#   PUSH   push-to-cache.sh dev uploads the finished closure.
+#
+# A `v*` tag then promotes dev -> release in promote-release.yml.
+# Secret: ATTIC_TOKEN_DEV (pull+push on dev, see nix-cache-infra/SETUP.md §6).
+# Fork pull requests have no secrets: they build without the cache, never push.
 name: Cache amd64
 on:
   push:
-    branches: [main]
+    branches: ['**']
     tags: ['v*']
   pull_request:
     branches: [main]
@@ -11,8 +24,14 @@ permissions:
 concurrency:
   group: cache-amd64-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  SYSTEM: x86_64-linux
+  INFRA_DIR: nix-cache-infra
 jobs:
   prepare:
+    # Same-repo PRs are already built by their branch push; the PR event only
+    # matters for forks (no token, so read-only).
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     outputs:
       envs: ${{ steps.catalog.outputs.envs }}
@@ -29,6 +48,9 @@ jobs:
       max-parallel: 3
       matrix:
         env: ${{ fromJSON(needs.prepare.outputs.envs) }}
+    env:
+      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_DEV }}
+      CACHE_PUSH: ${{ secrets.ATTIC_TOKEN_DEV != '' && github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v27
@@ -37,20 +59,39 @@ jobs:
             experimental-features = nix-command flakes
             max-jobs = auto
             cores = 0
-      - name: Configure public cache (read only)
-        if: github.event_name != 'push'
-        uses: cachix/cachix-action@v15
-        with:
-          name: ${{ vars.CACHIX_CACHE || 'rfswift' }}
-      - name: Configure cache publication
-        if: github.event_name == 'push'
-        uses: cachix/cachix-action@v15
-        with:
-          name: ${{ vars.CACHIX_CACHE || 'rfswift' }}
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+            # `attic use` adds the substituter to the runner user's nix.conf;
+            # the daemon only honours that for trusted users.
+            trusted-users = root runner
+      - name: Install attic client
+        run: nix profile install nixpkgs#attic-client
+      - name: Use dev cache (pull)
+        if: env.ATTIC_TOKEN != ''
+        run: ./${INFRA_DIR}/scripts/use-cache.sh dev
+      - name: Upload store paths while building
+        if: env.CACHE_PUSH == 'true'
+        run: |
+          nohup attic watch-store dev > attic-watch.log 2>&1 &
+          echo $! > attic-watch.pid
+          echo "attic watch-store started (pid $(cat attic-watch.pid))"
       - id: closure
         continue-on-error: true
-        run: .github/scripts/build-cache-report.sh x86_64-linux "${{ matrix.env }}" "reports/${{ matrix.env }}"
+        run: .github/scripts/build-cache-report.sh "$SYSTEM" "${{ matrix.env }}" "reports/${{ matrix.env }}"
+      - name: Push ${{ matrix.env }} closure to dev cache
+        if: env.CACHE_PUSH == 'true' && steps.closure.outcome == 'success'
+        run: |
+          out=$(nix build ".#packages.${SYSTEM}.${{ matrix.env }}" --no-link --print-out-paths)
+          ./${INFRA_DIR}/scripts/push-to-cache.sh dev "$out"
+      - name: Stop store watcher (flush pending uploads)
+        if: always() && env.CACHE_PUSH == 'true'
+        run: |
+          if [ -f attic-watch.pid ]; then
+            pid=$(cat attic-watch.pid)
+            # Give the watcher a moment to finish uploads queued by the build.
+            sleep 30
+            kill "$pid" 2>/dev/null || true
+            for _ in $(seq 1 30); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
+          fi
+          echo "::group::attic watch-store log"; cat attic-watch.log 2>/dev/null || true; echo "::endgroup::"
       - if: always()
         uses: actions/upload-artifact@v4
         with:

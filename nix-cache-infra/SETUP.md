@@ -292,10 +292,10 @@ token.
 
 ### 7.1 Build - pull, upload while building, push to dev
 
-The real workflow is committed at `.github/workflows/build-and-cache.yml`
-(do not copy YAML from this document; GitHub only picks up `.yml`/`.yaml`
-files under `.github/workflows/`). What it does, per environment listed in
-`catalog.json` (matrix, `fail-fast: false`, 3 in parallel):
+The real workflows are `.github/workflows/cache-amd64.yml`, `cache-arm64.yml`
+and `cache-riscv64.yml` (do not copy YAML from this document; GitHub only picks
+up `.yml`/`.yaml` files under `.github/workflows/`). Each does, per environment
+listed in `catalog.json` (matrix, `fail-fast: false`):
 
 1. `use-cache.sh dev` - logs in with `ATTIC_TOKEN_DEV` and wires
    `https://<devHost>/dev` in as a substituter, so cached paths are downloaded.
@@ -303,22 +303,23 @@ files under `.github/workflows/`). What it does, per environment listed in
    uploads every store path as soon as it is realised. If one package in an
    environment fails, everything built before it is already in the cache, so
    the next run starts where this one stopped.
-3. `nix build .#packages.x86_64-linux.<env> --keep-going`.
+3. `nix build .#packages.<system>.<env> --keep-going` (via
+   `.github/scripts/build-cache-report.sh`, which also produces the report).
 4. `push-to-cache.sh dev <out>` - pushes the finished closure (catches anything
    the watcher had not flushed).
 
-Triggers: every branch push and every `v*` tag (pull + push), and pull requests
-from forks (pull only; forks get no secrets, so they simply build without the
-cache). The runner needs `trusted-users = root runner` in `nix.conf` because
+Triggers: every branch push and every `v*` tag (pull + push) for amd64 and
+arm64; riscv64 (QEMU, slow) only on `main`, tags and manual dispatch. Pull
+requests from forks get no secrets, so they simply build without the cache. The runner needs `trusted-users = root runner` in `nix.conf` because
 `attic use` adds the substituter to the runner user's own configuration.
 
 ### 7.2 Promote dev -> release (on a tag)
 
 `.github/workflows/promote-release.yml`, on `v*` tags or manual dispatch. Per
-environment it runs `use-cache.sh dev` (the release token can pull dev, so the
-`nix build` that follows only downloads), then `promote.sh <out>` which copies
-the closure into the local store and pushes it to `release`, where attic
-re-signs it. Secrets: `ATTIC_TOKEN_RELEASE` and `CACHE_PUBLIC_KEY_DEV`.
+environment and system (x86_64, aarch64, riscv64) it runs `use-cache.sh dev`
+(the release token can pull dev), fetches the closure with
+`nix build --max-jobs 0` (download only, never compiles), then `promote.sh
+<out>` pushes it to `release`, where attic re-signs it. Secrets: `ATTIC_TOKEN_RELEASE` and `CACHE_PUBLIC_KEY_DEV`.
 
 ### 7.3 Consuming the cache (any client)
 

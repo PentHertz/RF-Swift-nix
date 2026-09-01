@@ -105,16 +105,23 @@ jobs:
       max-parallel: 3
       matrix:
         env: ${{ fromJSON(needs.prepare.outputs.envs) }}
+    env:
+      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_DEV }}
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v27
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
-      - name: Use the public binary cache (read only)
-        uses: cachix/cachix-action@v15
-        with:
-          name: ${{ vars.CACHIX_CACHE || 'rfswift' }}
+            trusted-users = root runner
+      # Read from the self-hosted dev cache so the audit downloads closures
+      # instead of compiling them. Skipped (build from source) when no token is
+      # available, e.g. fork pull requests.
+      - name: Use dev cache (pull)
+        if: env.ATTIC_TOKEN != ''
+        run: |
+          nix profile install nixpkgs#attic-client
+          ./nix-cache-infra/scripts/use-cache.sh dev
       - name: Audit ${{ matrix.env }}
         # Report-only by default; a manual run can raise the gate. Scheduled and
         # PR runs never fail on upstream CVEs - they publish artifacts and (for

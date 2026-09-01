@@ -1,9 +1,13 @@
-# On a version tag, copy every environment closure from the dev cache to the
-# release cache (https://<releaseHost>/release), which is what RF Swift users
-# consume. Nothing is rebuilt here: the dev cache is wired in as a substituter
-# first, so `nix build` only downloads what build-and-cache.yml already pushed.
+# On a version tag, copy every environment closure, for every architecture,
+# from the dev cache to the release cache (https://<releaseHost>/release), which
+# is what RF Swift users consume. Nothing is rebuilt: the dev cache is wired in
+# as a substituter and `nix build --max-jobs 0` refuses to compile, so an
+# environment that cache-<arch>.yml never managed to push simply fails here and
+# shows up in the matrix instead of silently being built on the runner.
+# Substitution is platform-independent, so one x86_64 runner promotes all three
+# systems.
 #
-# Repository secrets (see nix-cache-infra/SETUP.md, "Caches + tokens"):
+# Repository secrets (see nix-cache-infra/SETUP.md §6):
 #   ATTIC_TOKEN_RELEASE    pull dev + push release token (mint-token.sh ci-rel)
 #   CACHE_PUBLIC_KEY_DEV   dev cache public key, e.g. dev:BASE64... (attic cache info dev)
 name: promote-release
@@ -15,11 +19,8 @@ permissions:
   contents: read
 concurrency:
   group: promote-release-${{ github.ref }}
-
 env:
-  SYSTEM: x86_64-linux
   INFRA_DIR: nix-cache-infra
-
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -30,15 +31,15 @@ jobs:
       - uses: actions/checkout@v4
       - id: catalog
         run: echo "envs=$(jq -c '[.environments[].name]' catalog.json)" >> "$GITHUB_OUTPUT"
-
   promote:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       max-parallel: 3
       matrix:
+        system: [x86_64-linux, aarch64-linux, riscv64-linux]
         env: ${{ fromJSON(needs.prepare.outputs.envs) }}
     env:
       ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_RELEASE }}
@@ -49,22 +50,23 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
-            max-jobs = auto
-            cores = 0
             trusted-users = root runner
       - name: Install attic client
         run: nix profile install nixpkgs#attic-client
-
-      # The release token can pull dev, so the build below is a download.
+      # The release token can pull dev, so realising the closure is a download.
       - name: Use dev cache (pull)
         run: ./${INFRA_DIR}/scripts/use-cache.sh dev
-
-      - name: Realise ${{ matrix.env }} from dev
-        id: build
+      - name: Fetch ${{ matrix.env }} (${{ matrix.system }}) from dev
+        id: fetch
         run: |
-          out=$(nix build ".#packages.${SYSTEM}.${{ matrix.env }}" \
-                  --no-link --print-out-paths --print-build-logs)
+          out=$(nix build ".#packages.${{ matrix.system }}.${{ matrix.env }}" \
+                  --max-jobs 0 --no-link --print-out-paths)
           echo "out=$out" >> "$GITHUB_OUTPUT"
-
-      - name: Promote ${{ matrix.env }} to release
-        run: ./${INFRA_DIR}/scripts/promote.sh "${{ steps.build.outputs.out }}"
+      - name: Promote ${{ matrix.env }} (${{ matrix.system }}) to release
+        run: ./${INFRA_DIR}/scripts/promote.sh "${{ steps.fetch.outputs.out }}"
+      - name: Summary
+        if: always()
+        env:
+          OUT: ${{ steps.fetch.outputs.out }}
+        run: |
+          echo "- \`${{ matrix.env }}\` ${{ matrix.system }}: **${{ job.status }}** ${OUT:+(\`$OUT\`)}" >> "$GITHUB_STEP_SUMMARY"

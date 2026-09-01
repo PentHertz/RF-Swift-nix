@@ -26,7 +26,7 @@ The current implementation status, evidence levels, known gaps, and RF Swift
 binary improvement backlog are maintained in
 [`docs/verification-audit.md`](docs/verification-audit.md).
 
-GitHub Actions, Cachix publishing, branch protection, and release hand-off are
+GitHub Actions, binary cache publishing, branch protection, and release hand-off are
 documented in [`docs/ci-cd.md`](docs/ci-cd.md).
 
 Cache population is split into independent amd64, native arm64, and
