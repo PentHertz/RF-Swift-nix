@@ -1,0 +1,18 @@
+name: promote-release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_RELEASE }}      # pull dev, push release
+      DEV_PUBLIC_KEY: ${{ secrets.CACHE_PUBLIC_KEY_DEV }}  # from: attic cache info dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - run: nix profile install nixpkgs#attic-client
+      - name: Promote closures to release
+        run: |
+          outs=$(nix build .#packages.x86_64-linux.reversing --no-link --print-out-paths)
+          ./nix-cache-infra/scripts/promote.sh $outs
