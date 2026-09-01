@@ -40,6 +40,54 @@ git add pkgs/ && git commit -m "gr-lora: bump to latest upstream"
 Manual re-pin (what the script automates), if you ever need it: set the `hash` to
 `lib.fakeHash`, run `nix build .#pkg-<name>`, and paste the `got:` hash Nix prints.
 
+### Bumping one tool's version (and its hashes)
+
+For a single package, `scripts/package-maintenance.sh` drives the whole update:
+
+```bash
+# Version bump: nix-update rewrites version + src hash (+ vendorHash/cargoHash):
+./scripts/package-maintenance.sh update <name> --version 1.4.2
+
+# Branch/commit package: edit `rev` (and `version`) in pkgs/**/<name>.nix, then:
+./scripts/package-maintenance.sh prefetch <name>   # pins every stale hash
+
+# Confirm and (re)pin any hash that is still wrong:
+./scripts/package-maintenance.sh check <name>
+```
+
+### Secondary hashes (Go `vendorHash`, Rust `cargoHash`)
+
+A Go (`buildGoModule`) or Rust (`buildRustPackage`) tool has a **second** hash for
+its fetched dependencies (`vendorHash` / `cargoHash`) on top of the `src` hash.
+When you move the version or `rev`, both must change. `prefetch` handles this: it
+re-runs the build and pins each `got:` mismatch in turn (source first, then the
+vendor/cargo hash), up to four passes. Never paste the `specified:` value — only
+the `got:` one. To do it by hand, set the offending hash to `lib.fakeHash` and
+rebuild once per hash.
+
+## Vendor SDK downloads (proprietary blobs)
+
+Commercial SDKs (SignalHound, Harogic, Deepace KC908, SAStudio, ...) are not git
+pins - their version, download URL and content hash live in
+`pkgs/vendor/sources.json`. Update them with the `vendor-update` subcommand, which
+prefetches the archive and rewrites version + url + hash (and per-system
+`artifacts` for SDKs that ship one download per platform):
+
+```bash
+# See current versions and (optionally) probe upstream for newer ones:
+./scripts/package-maintenance.sh vendor-report [--check-urls]
+
+# Single-download SDK:
+./scripts/package-maintenance.sh vendor-update signalhound-sdk 08_26_26 \
+  https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_08_26_26.zip
+
+# Per-system SDK (repeat once per platform it ships):
+./scripts/package-maintenance.sh vendor-update sastudio 4.4.55.48 \
+  https://.../SAStudio4_4.4.55.48_arm64.zip --system aarch64-linux
+
+./scripts/package-maintenance.sh check <name>   # then verify it still builds
+```
+
 ## 2. The nixpkgs baseline (everything from nixpkgs)
 
 Tools pulled straight from nixpkgs move when the flake input moves:

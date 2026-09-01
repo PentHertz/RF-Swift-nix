@@ -1,15 +1,36 @@
-# SDR++ (SDRPlusPlus), HydraSDR fork. Overrides the nixpkgs sdrpp source so we
-# reuse its full set of source/sink build flags and dependencies, then adds the
-# device sources RF Swift's images ship on top: HydraSDR, RFNM, Harogic,
-# SignalHound BB60 and Deepace KC908, each only on the architectures its
-# library exists for (see `available` below).
-{ lib, stdenv, fetchFromGitHub, sdrpp, libhydrasdr, libjack2
+# SDR++ (SDRPlusPlus), official upstream (AlexandreRouma) pinned to a recent
+# master. Upstream already carries the HydraSDR, Harogic and Deepace KC908
+# (kcsdr) source modules natively - so HydraSDR tracks the current libhydrasdr
+# API without a fork - and we graft in only the SignalHound BB60 module, which
+# upstream lacks, from the PentHertz fork. Overrides the nixpkgs sdrpp source so
+# we reuse its full set of source/sink build flags and dependencies, then adds
+# these device sources on top, each only on the architectures its library exists
+# for (see `available` below).
+{ lib, stdenv, fetchFromGitHub, sdrpp, libhydrasdr, libjack2, libad9361, libiio
 , soapysdr-with-plugins
 , signalhound-sdk ? null, harogic-htra-sdk ? null, kc908-sdk ? null }:
 
 let
   inherit (stdenv.hostPlatform) isLinux isDarwin;
   ext = stdenv.hostPlatform.extensions.sharedLibrary;
+
+  # nixpkgs' libad9361 leaves aarch64-darwin without a usable library: upstream
+  # libad9361-iio defaults OSX_PACKAGE=ON (-> SKIP_INSTALL_ALL, the TARGETS
+  # install is skipped) and forces the target to a .framework, so only the .pc
+  # lands - no dylib, no header. Build a plain dylib instead: OSX_PACKAGE=OFF so
+  # the install runs, FRAMEWORK FALSE so it is a normal shared lib, drop the
+  # hardware-only tests (they include iio/iio.h this libiio does not lay out),
+  # and the CMake-4 policy shim. On Linux the nixpkgs build is already fine.
+  libad9361Fixed =
+    if !isDarwin then libad9361
+    else libad9361.overrideAttrs (o: {
+      postPatch = (o.postPatch or "") + ''
+        substituteInPlace CMakeLists.txt --replace-quiet 'FRAMEWORK TRUE' 'FRAMEWORK FALSE'
+        sed -i '/add_subdirectory(test)/d;/add_subdirectory(bindings)/d;/enable_testing/d' CMakeLists.txt
+      '';
+      cmakeFlags = (o.cmakeFlags or [ ]) ++ [ "-DOSX_PACKAGE=OFF" "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
+      meta = (o.meta or { }) // { platforms = (o.meta.platforms or [ ]) ++ [ "aarch64-darwin" "x86_64-darwin" ]; };
+    });
 
   # A vendor library counts only where nixpkgs' platform metadata says it
   # builds: harogic-htra-sdk on x86_64/aarch64 Linux, signalhound-sdk also on
@@ -46,11 +67,10 @@ in
 #   * bladerf_source defaulted to Linux-only upstream; libbladeRF builds on
 #     macOS too, so enable it everywhere.
 #   * usrp_source defaults off on every platform; uhd builds on all of ours.
-#   * plutosdr_source stays Linux-only: nixpkgs' libad9361 is broken on
-#     aarch64-darwin (it ships a pkg-config file pointing at empty include/lib
-#     dirs - no ad9361.h, no dylib) and the fork's Darwin CMake branch hardcodes
-#     /Library/Frameworks/iio.framework, which Nix does not provide. On Linux it
-#     resolves libiio+libad9361 via pkg-config and builds fine.
+#   * plutosdr_source now builds on Darwin too, via libad9361Fixed (a working
+#     dylib, see above) plus a postPatch that points the module's Darwin CMake
+#     branch at pkg-config instead of the /Library/Frameworks/*.framework paths
+#     it hardcodes. libiio already builds on macOS. On Linux it was already fine.
 #   * soapysdr-with-plugins is RF Swift's own plugin set (pkgs/default.nix), so
 #     the Soapy source also sees HydraSDR, RFNM, XTRX, LiteX M2SDR and uSDR.
 # Left off deliberately: sdrplay (proprietary API whose nixpkgs source is
@@ -59,16 +79,17 @@ in
 (sdrpp.override {
   bladerf_source = true;
   usrp_source = true;
-  plutosdr_source = isLinux;
-  inherit soapysdr-with-plugins;
+  plutosdr_source = true;
+  libad9361 = libad9361Fixed;
+  inherit libiio soapysdr-with-plugins;
 }).overrideAttrs (old: {
-  pname = "sdrpp-hydrasdr";
-  version = "unstable-hydrasdr";
+  pname = "sdrpp-rfswift";
+  version = "unstable-2026-07-05";
   src = fetchFromGitHub {
-    owner = "hydrasdr";
+    owner = "AlexandreRouma";
     repo = "SDRPlusPlus";
-    rev = "6a232e6fed702a294819afb06b6dbab76c92c96a";
-    hash = "sha256-TD39CFO2kEZGcbu/cyGT3WVb4TbvKbj1HNon6vu+UNA=";
+    rev = "8c9f5ee8fe405775bfcd62c8c8f8c0fc928a64af";
+    hash = "sha256-P5wFOqdjRQTzUyI7pPaO1cYj3QZSeu5YZsl2qKou4Is=";
   };
   # The fork adds a HydraSDR source module needing libhydrasdr. On Darwin,
   # nixpkgs' rtaudio (pulled in by the audio source/sink modules) advertises
@@ -82,6 +103,10 @@ in
     ++ lib.optional withKcsdr kc908-sdk;
 
   cmakeFlags = (old.cmakeFlags or [ ]) ++ [
+    # Official upstream ships hydrasdr_source but leaves it OFF by default; it
+    # resolves libhydrasdr via pkg-config, so this builds it against whatever
+    # libhydrasdr is in the closure (the latest, from pkgs/libhydrasdr.nix).
+    (lib.cmakeBool "OPT_BUILD_HYDRASDR_SOURCE" true)
     (lib.cmakeBool "OPT_BUILD_HAROGIC_SOURCE" withHarogic)
     (lib.cmakeBool "OPT_BUILD_KCSDR_SOURCE" withKcsdr)
     (lib.cmakeBool "OPT_BUILD_RFNM_SOURCE" withRfnm)
@@ -103,7 +128,7 @@ in
     fi
     if [ -f core/src/version.h ]; then
       substituteInPlace core/src/version.h \
-        --replace-quiet "1.3.0" "unstable-hydrasdr"
+        --replace-quiet "1.3.0" "unstable-rfswift"
     fi
     # The GLFW window title and credits dialog embed __DATE__/__TIME__. A
     # reproducible Nix build normalizes those macros via SOURCE_DATE_EPOCH, so
@@ -152,6 +177,13 @@ if (OPT_BUILD_SIGNALHOUNDBB_SOURCE)
 add_subdirectory("source_modules/signalhound_bb_source")
 endif (OPT_BUILD_SIGNALHOUNDBB_SOURCE)
 CMAKE
+  '' + lib.optionalString isDarwin ''
+    # PlutoSDR: the module's Darwin CMake branch hardcodes
+    # /Library/Frameworks/{iio,ad9361}.framework, which Nix does not provide.
+    # Disable that branch so it falls through to the pkg-config path and resolves
+    # libiio + libad9361Fixed via their .pc files, exactly like the Linux build.
+    substituteInPlace source_modules/plutosdr_source/CMakeLists.txt \
+      --replace-quiet 'MATCHES "Darwin"' 'MATCHES "DarwinDisabled"'
   '';
 
   # SDR++ builds its plugins as the platform's native shared-library type, so
@@ -165,9 +197,8 @@ CMAKE
     # them (e.g. a lost .override) fails the build instead of shipping quietly.
     test -e "$out/lib/sdrpp/plugins/bladerf_source${ext}"
     test -e "$out/lib/sdrpp/plugins/usrp_source${ext}"
-    ${lib.optionalString isLinux ''
-      test -e "$out/lib/sdrpp/plugins/plutosdr_source${ext}"
-    ''}
+    # plutosdr_source now builds on Darwin too (libad9361Fixed + pkg-config patch).
+    test -e "$out/lib/sdrpp/plugins/plutosdr_source${ext}"
     ${lib.optionalString withHarogic ''test -e "$out/lib/sdrpp/plugins/harogic_source${ext}"''}
     ${lib.optionalString withSignalHound ''test -e "$out/lib/sdrpp/plugins/signalhound_bb_source${ext}"''}
     ${lib.optionalString withKcsdr ''test -e "$out/lib/sdrpp/plugins/kcsdr_source${ext}"''}
@@ -184,7 +215,7 @@ CMAKE
   };
 
   meta = (old.meta or { }) // {
-    description = "SDR++ (HydraSDR fork): cross-platform SDR receiver, with the HydraSDR, RFNM, Harogic, SignalHound and KC908 sources";
-    homepage = "https://github.com/hydrasdr/SDRPlusPlus";
+    description = "SDR++ (official upstream): cross-platform SDR receiver, with the HydraSDR, RFNM, Harogic, SignalHound and KC908 sources";
+    homepage = "https://github.com/AlexandreRouma/SDRPlusPlus";
   };
 })
