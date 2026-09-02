@@ -14,7 +14,7 @@ attr=".#packages.${system}.${environment}"
 set +e
 nix build "$attr" --no-link --print-build-logs --keep-going 2>&1 | tee "$log"
 status=${PIPESTATUS[0]}
-set -e
+# Everything below is best-effort reporting: it must never mask $status.
 finished=$(date -u +%FT%TZ)
 
 if [ "$status" -eq 0 ]; then result=success; else result=failure; fi
@@ -36,11 +36,40 @@ jq -n \
   echo "- Started: \`$started\`"
   echo "- Finished: \`$finished\`"
   if [ "$status" -ne 0 ]; then
+    # Nix's own verdict first: which derivations actually failed, and the
+    # dependency chain up to the environment. This is the signal; everything
+    # else below is context.
     echo
-    echo "## Relevant diagnostics"
+    echo "## Failed derivations"
     echo
     echo '```text'
-    LC_ALL=C grep -aE 'error:|failed|hash mismatch|unsupported|not available|no space|disk.*full|Cannot build' "$log" | tail -80 || tail -80 "$log"
+    LC_ALL=C grep -aE '^error: (builder for|[0-9]+ dependencies of derivation)' "$log" | tail -40 \
+      || echo "(no 'error: builder for' line - the build was killed or ran out of time/space)"
+    echo '```'
+    # For each failed builder, its own last lines (the test summary / compiler
+    # error), keyed on the "<pname>> " log prefix nix uses with -L.
+    echo
+    echo "## Failure context"
+    echo
+    echo '```text'
+    LC_ALL=C grep -aoE "^error: builder for '/nix/store/[^']+\.drv'" "$log" \
+      | sed -E "s#^error: builder for '/nix/store/[a-z0-9]{32}-(.+)\.drv'#\1#" | sort -u | head -10 \
+      | while IFS= read -r drv; do
+          # nix -L prefixes each line with the derivation name; match the name
+          # without its version ("python3.14-urwid-3.0.5" -> "python3.14-urwid").
+          prefix=$(printf '%s' "$drv" | sed -E 's/-[0-9][^-]*$//')
+          echo "### $drv"
+          LC_ALL=C grep -aE "^${prefix}[^>]*> " "$log" \
+            | grep -aE 'error|Error|FAIL|failed|Traceback|assert|Exception|No space|timed out|Killed' \
+            | tail -25 || true
+          echo
+        done
+    echo '```'
+    echo
+    echo "## Other diagnostics"
+    echo
+    echo '```text'
+    LC_ALL=C grep -aE 'hash mismatch|no space|disk.*full|Cannot build|exceeded the maximum execution time|signal|Killed' "$log" | tail -20 || true
     echo '```'
   fi
 } > "$summary"

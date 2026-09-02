@@ -185,6 +185,16 @@
             # fails (1 of ~946). Sandbox artefact, not our code; builds from source
             # on aarch64-linux and comes in via pysim (telecom envs). Skip its check.
             cmd2 = pyprev.cmd2.overridePythonAttrs (_: { doCheck = false; });
+            # urwid 3.0.5 fails one check of ~310 on the CPython 3.14 pin
+            # (seen in the x86_64 network cache build; the rest pass). It is a
+            # consumed TUI dep, pulled in via mitmproxy (network), so skip its
+            # check phase like the others rather than lose the environment.
+            urwid = pyprev.urwid.overridePythonAttrs (_: { doCheck = false; });
+            # psygnal 0.15.1 fails 2 of ~680 checks on the CPython 3.14 pin
+            # (aarch64 android + osint cache builds). It sits under anywidget ->
+            # plotly, which quark-engine, apkleaks (android) and theharvester
+            # (osint) pull in, so the two checks take both environments down.
+            psygnal = pyprev.psygnal.overridePythonAttrs (_: { doCheck = false; });
           }
           # httpx2/httpcore2 are the httpx 2.x pre-release attrs; guard with
           # optionalAttrs so a later pin that renames or drops them still evals.
