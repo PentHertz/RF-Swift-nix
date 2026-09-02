@@ -27,8 +27,8 @@ sudo ./scripts/mint-token.sh reader <who> 1y      # pull dev + release, valid on
 
 The printed token is the only secret you need. Treat it like a password.
 You also need the public key of each cache you enable, shown by
-`attic cache info release` / `attic cache info dev` on the server. The release
-key is:
+`attic cache info release` / `attic cache info dev` on the server. For example, the release
+key will like that:
 
 ```
 release:d8owbIehqU52DRGRfhfx1/ykhRiCYgk5QKUh4lWPPBk=
