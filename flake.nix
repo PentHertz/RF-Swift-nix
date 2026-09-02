@@ -56,6 +56,15 @@
                 nativeCheckInputs = [ ];
                 checkInputs = [ ];
               });
+              # cantools' check phase dies with SIGTRAP (exit 133) on
+              # aarch64-darwin: tests/test_plot_without_mock.py imports
+              # matplotlib.pyplot and renders a PDF, and matplotlib's default
+              # macOS backend is the native Cocoa one, which traps inside the
+              # Nix sandbox (no WindowServer). The tool itself works on a real
+              # Mac and the suite passes on Linux; skip the tests on Darwin only.
+              cantools = pyprev.cantools.overridePythonAttrs (o: {
+                doCheck = false;
+              });
             })
           ];
           # nixpkgs adds QtWebEngine unconditionally, although Cutter 2.5.0
