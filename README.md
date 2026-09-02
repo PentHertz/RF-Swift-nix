@@ -1,6 +1,6 @@
 # ❄️ RF-Swift-nix
 
-Current development version: **v1.0.0-dev**, built from `main`.
+Current development version: **v1.0.0-dev**.
 
 Reproducible RF, hardware and security tool environments for [RF Swift](https://github.com/PentHertz/RF-Swift), powered by the Nix package manager.
 
