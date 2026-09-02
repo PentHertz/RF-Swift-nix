@@ -35,6 +35,7 @@ jq -n \
   echo "- Exit code: \`$status\`"
   echo "- Started: \`$started\`"
   echo "- Finished: \`$finished\`"
+  echo "- Disk free at end: \`$(df -h / | awk 'NR==2{print $4 " of " $2}')\`"
   if [ "$status" -ne 0 ]; then
     # Nix's own verdict first: which derivations actually failed, and the
     # dependency chain up to the environment. This is the signal; everything
@@ -43,7 +44,10 @@ jq -n \
     echo "## Failed derivations"
     echo
     echo '```text'
-    LC_ALL=C grep -aE '^error: (builder for|[0-9]+ dependencies of derivation)' "$log" | tail -40 \
+    # Besides builder failures, catch the non-builder ways a derivation fails:
+    # a substitute (cache download) that could not be fetched, a fixed-output
+    # hash mismatch (moving upstream git ref), or the runner disk filling up.
+    LC_ALL=C grep -aiE '^error: (builder for|[0-9]+ dependencies of derivation|some substitutes for|hash mismatch|unable to download|cannot build|writing to file)|no space left on device|exceeded the maximum execution time' "$log" | tail -40 \
       || echo "(no 'error: builder for' line - the build was killed or ran out of time/space)"
     echo '```'
     # For each failed builder, its own last lines (the test summary / compiler
@@ -69,7 +73,7 @@ jq -n \
     echo "## Other diagnostics"
     echo
     echo '```text'
-    LC_ALL=C grep -aE 'hash mismatch|no space|disk.*full|Cannot build|exceeded the maximum execution time|signal|Killed' "$log" | tail -20 || true
+    LC_ALL=C grep -aiE 'hash mismatch|specified:|got:|no space|disk.*full|cannot build|exceeded the maximum execution time|signal|killed|substituter|unable to download|HTTP error' "$log" | tail -20 || true
     echo '```'
   fi
 } > "$summary"

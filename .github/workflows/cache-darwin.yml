@@ -1,5 +1,7 @@
-# Build every RF Swift environment for aarch64-linux and publish the closures
-# to the self-hosted attic binary cache (nix-cache-infra/), `dev` cache:
+# Build every RF Swift environment for aarch64-darwin (Apple Silicon) and
+# publish the closures to the self-hosted attic binary cache
+# (nix-cache-infra/), `dev` cache - same PULL / WATCH / PUSH flow as the Linux
+# cache-<arch>.yml workflows:
 #
 #   PULL   use-cache.sh dev wires https://<devHost>/dev in as a substituter so
 #          already-cached paths are downloaded instead of rebuilt.
@@ -11,10 +13,15 @@
 # A `v*` tag then promotes dev -> release in promote-release.yml.
 # Secret: ATTIC_TOKEN_DEV (pull+push on dev, see nix-cache-infra/SETUP.md §6).
 # Fork pull requests have no secrets: they build without the cache, never push.
-name: Cache arm64
+#
+# aarch64-darwin only: GitHub retired its Intel macOS runners, so x86_64-darwin
+# stays evaluation-only (ci.yml). macOS runners are scarce (a handful run
+# concurrently) and the SDR closures take hours, so like riscv64 this runs for
+# main, tags and manual dispatch rather than every branch push.
+name: Cache darwin
 on:
   push:
-    branches: ['**']
+    branches: [main]
     tags: ['v*']
   pull_request:
     branches: [main]
@@ -22,17 +29,17 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: cache-arm64-${{ github.ref }}
+  group: cache-darwin-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
-  SYSTEM: aarch64-linux
+  SYSTEM: aarch64-darwin
   INFRA_DIR: nix-cache-infra
 jobs:
   prepare:
     # Same-repo PRs are already built by their branch push; the PR event only
     # matters for forks (no token, so read-only).
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     outputs:
       envs: ${{ steps.catalog.outputs.envs }}
     steps:
@@ -41,7 +48,7 @@ jobs:
         run: echo "envs=$(jq -c '[.environments[].name]' catalog.json)" >> "$GITHUB_OUTPUT"
   build:
     needs: prepare
-    runs-on: ubuntu-24.04-arm
+    runs-on: macos-14
     timeout-minutes: 360
     strategy:
       fail-fast: false
@@ -53,16 +60,6 @@ jobs:
       CACHE_PUSH: ${{ secrets.ATTIC_TOKEN_DEV != '' && github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
-      # GitHub's standard runners have ~14 GB free; an environment closure
-      # pulled from the dev cache plus its build inputs can exceed that. Drop
-      # the preinstalled toolchains we never use (~25 GB) before Nix starts.
-      - name: Free runner disk space
-        run: |
-          df -h / | tail -1
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
-                      /usr/local/share/boost /usr/local/.ghcup /usr/share/swift "$AGENT_TOOLSDIRECTORY" || true
-          sudo docker image prune --all --force > /dev/null 2>&1 || true
-          df -h / | tail -1
       - uses: cachix/install-nix-action@v27
         with:
           extra_nix_config: |
@@ -108,7 +105,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nix-cache-arm64-${{ matrix.env }}
+          name: nix-cache-darwin-${{ matrix.env }}
           path: reports/${{ matrix.env }}
       - if: steps.closure.outcome != 'success'
         run: exit 1
@@ -120,10 +117,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: nix-cache-arm64-*
+          pattern: nix-cache-darwin-*
           path: reports
-      - run: .github/scripts/aggregate-cache-reports.sh reports cache-arm64-report.md
+      - run: .github/scripts/aggregate-cache-reports.sh reports cache-darwin-report.md
       - uses: actions/upload-artifact@v4
         with:
-          name: nix-cache-arm64-report
-          path: cache-arm64-report.md
+          name: nix-cache-darwin-report
+          path: cache-darwin-report.md

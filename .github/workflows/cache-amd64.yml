@@ -53,10 +53,23 @@ jobs:
       CACHE_PUSH: ${{ secrets.ATTIC_TOKEN_DEV != '' && github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
+      # GitHub's standard runners have ~14 GB free; an environment closure
+      # pulled from the dev cache plus its build inputs can exceed that. Drop
+      # the preinstalled toolchains we never use (~25 GB) before Nix starts.
+      - name: Free runner disk space
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+                      /usr/local/share/boost /usr/local/.ghcup /usr/share/swift "$AGENT_TOOLSDIRECTORY" || true
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+          df -h / | tail -1
       - uses: cachix/install-nix-action@v27
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+            # A failed download from a substituter (dev cache hiccup, truncated
+            # NAR) must not fail the environment: rebuild that path instead.
+            fallback = true
             max-jobs = auto
             cores = 0
             # `attic use` adds the substituter to the runner user's nix.conf;

@@ -8,6 +8,9 @@ The current Nix environment release line is **v1.0.0-dev** from `main`.
 - `cache-arm64.yml` builds on GitHub's native `ubuntu-24.04-arm` runner.
 - `cache-riscv64.yml` builds `riscv64-linux` with registered QEMU user-mode
   emulation.
+- `cache-darwin.yml` builds `aarch64-darwin` (Apple Silicon) on GitHub's
+  `macos-14` runner. `x86_64-darwin` stays evaluation-only in `ci.yml` because
+  GitHub no longer offers Intel macOS runners.
 
 The workflows do not depend on each other and every matrix uses
 `fail-fast: false`. Each job publishes to the self-hosted attic binary cache
@@ -57,13 +60,14 @@ The cache is the attic server described in `nix-cache-infra/`
 tokens).
 
 - `cache-amd64.yml` and `cache-arm64.yml` run on every branch push, `v*` tags,
-  and fork pull requests. `cache-riscv64.yml` (QEMU user-mode, slow) runs only
-  for `main`, tags and manual dispatch.
+  and fork pull requests. `cache-riscv64.yml` (QEMU user-mode, slow) and
+  `cache-darwin.yml` (scarce macOS runners, long SDR builds) run only for
+  `main`, tags and manual dispatch.
 - Every environment job pulls from `dev`, uploads store paths while it builds,
   and pushes its closure when done. A failed environment still leaves its
   finished dependencies in the cache, so the next run resumes there.
 - `promote-release.yml` runs on `v*` tags and copies every environment closure
-  for all three systems from `dev` to `release` with `--max-jobs 0`, so nothing
+  for all four systems from `dev` to `release` with `--max-jobs 0`, so nothing
   is ever compiled on the promote runner; a closure that never reached `dev`
   fails visibly in the matrix.
 
@@ -100,7 +104,7 @@ to the cache.
 |---|---:|---:|---:|
 | Pull request | yes | all 14 environments | no |
 | Merge queue | yes | all 14 environments | no |
-| Push to any branch | yes | all 14 environments (riscv64: `main` only) | yes |
+| Push to any branch | yes | all 14 environments (riscv64, darwin: `main` only) | yes |
 | Tag matching `v*` | yes | all 14 environments | yes, then promoted to release |
 | Manual dispatch | yes | all 14 environments | yes |
 

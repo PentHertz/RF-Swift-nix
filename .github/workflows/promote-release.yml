@@ -4,8 +4,8 @@
 # as a substituter and `nix build --max-jobs 0` refuses to compile, so an
 # environment that cache-<arch>.yml never managed to push simply fails here and
 # shows up in the matrix instead of silently being built on the runner.
-# Substitution is platform-independent, so one x86_64 runner promotes all three
-# systems.
+# Substitution is platform-independent, so one x86_64 runner promotes all four
+# systems (Linux amd64/arm64/riscv64 and Apple Silicon).
 #
 # Repository secrets (see nix-cache-infra/SETUP.md §6):
 #   ATTIC_TOKEN_RELEASE    pull dev + push release token (mint-token.sh ci-rel)
@@ -39,7 +39,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        system: [x86_64-linux, aarch64-linux, riscv64-linux]
+        system: [x86_64-linux, aarch64-linux, riscv64-linux, aarch64-darwin]
         env: ${{ fromJSON(needs.prepare.outputs.envs) }}
     env:
       ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_RELEASE }}

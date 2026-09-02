@@ -292,8 +292,8 @@ token.
 
 ### 7.1 Build - pull, upload while building, push to dev
 
-The real workflows are `.github/workflows/cache-amd64.yml`, `cache-arm64.yml`
-and `cache-riscv64.yml` (do not copy YAML from this document; GitHub only picks
+The real workflows are `.github/workflows/cache-amd64.yml`, `cache-arm64.yml`,
+`cache-riscv64.yml` and `cache-darwin.yml` (do not copy YAML from this document; GitHub only picks
 up `.yml`/`.yaml` files under `.github/workflows/`). Each does, per environment
 listed in `catalog.json` (matrix, `fail-fast: false`):
 
@@ -309,14 +309,15 @@ listed in `catalog.json` (matrix, `fail-fast: false`):
    the watcher had not flushed).
 
 Triggers: every branch push and every `v*` tag (pull + push) for amd64 and
-arm64; riscv64 (QEMU, slow) only on `main`, tags and manual dispatch. Pull
-requests from forks get no secrets, so they simply build without the cache. The runner needs `trusted-users = root runner` in `nix.conf` because
+arm64; riscv64 (QEMU, slow) and darwin (aarch64 on `macos-14`, scarce runners)
+only on `main`, tags and manual dispatch. Pull requests from forks get no
+secrets, so they simply build without the cache. The runner needs `trusted-users = root runner` in `nix.conf` because
 `attic use` adds the substituter to the runner user's own configuration.
 
 ### 7.2 Promote dev -> release (on a tag)
 
 `.github/workflows/promote-release.yml`, on `v*` tags or manual dispatch. Per
-environment and system (x86_64, aarch64, riscv64) it runs `use-cache.sh dev`
+environment and system (x86_64/aarch64/riscv64 Linux, aarch64-darwin) it runs `use-cache.sh dev`
 (the release token can pull dev), fetches the closure with
 `nix build --max-jobs 0` (download only, never compiles), then `promote.sh
 <out>` pushes it to `release`, where attic re-signs it. Secrets: `ATTIC_TOKEN_RELEASE` and `CACHE_PUBLIC_KEY_DEV`.
