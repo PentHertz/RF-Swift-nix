@@ -324,19 +324,20 @@ environment and system (x86_64/aarch64/riscv64 Linux, aarch64-darwin) it runs `u
 
 ### 7.3 Consuming the cache (any client)
 
+Client-side setup for developers and RF Swift users (reader token, system-wide
+`nix.conf` + `netrc`, or `attic use`, plus verification and troubleshooting)
+lives in the repository docs: [`docs/binary-cache.md`](../docs/binary-cache.md).
+In short:
+
 ```bash
-# On a developer machine or downstream runner:
-attic login rfswift https://nixcache.penthertz.com <reader-token>
-attic use release        # wires it into nix.conf for you
-```
-
-Or configure Nix directly (no attic client needed to *pull*):
-
-```
-# /etc/nix/nix.conf  (or ~/.config/nix/nix.conf)
-substituters = https://nixcache.penthertz.com/release https://cache.nixos.org
-trusted-public-keys = release:BASE64... cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-netrc-file = /etc/nix/netrc         # holds the pull token for nixcache.penthertz.com
+# Server: mint a pull-only token.
+sudo ./scripts/mint-token.sh reader <who> 1y
+# Client, /etc/nix/nix.conf:
+#   extra-substituters = https://nixcache.penthertz.com/release
+#   extra-trusted-public-keys = release:<key from: attic cache info release>
+# Client, /etc/nix/netrc (root, 600):
+#   machine nixcache.penthertz.com
+#   password <reader-token>
 ```
 
 ```mermaid

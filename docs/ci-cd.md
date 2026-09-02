@@ -75,6 +75,9 @@ Secrets: `ATTIC_TOKEN_DEV` (pull+push dev), `ATTIC_TOKEN_RELEASE` (pull dev,
 push release), `CACHE_PUBLIC_KEY_DEV` (output of `attic cache info dev`).
 Minting them is covered in `nix-cache-infra/SETUP.md`, section 6.
 
+Pointing a developer machine or an RF Swift user at the cache is covered in
+[`binary-cache.md`](binary-cache.md).
+
 ## One-time GitHub setup
 
 1. Deploy the attic cache and mint the CI tokens (`nix-cache-infra/SETUP.md`,
@@ -84,8 +87,8 @@ Minting them is covered in `nix-cache-infra/SETUP.md`, section 6.
 3. Add the repository secrets `ATTIC_TOKEN_DEV`, `ATTIC_TOKEN_RELEASE` and
    `CACHE_PUBLIC_KEY_DEV`. Do not put the tokens in the repository or expose
    them to pull request code.
-4. Point your own machine at `dev` (see `nix-cache-infra/SETUP.md`, 7.3) so
-   local builds reuse what CI already compiled.
+4. Point your own machine at `dev` (see [`binary-cache.md`](binary-cache.md))
+   so local builds reuse what CI already compiled.
 5. Under **Settings → Rules → Rulesets** (or branch protection), protect
    `main`, require pull requests, and require the status check
    **Required Nix verification**. Requiring the single aggregate check avoids

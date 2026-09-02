@@ -82,7 +82,7 @@ therefore be substantial, while later launches reuse the same Nix store closure.
 
 ## Eager vs on-demand, and the binary cache
 
-Creating an environment eagerly builds its whole tool closure once; `--lazy` builds each tool the first time it is called. Either way, "build" is mostly "download a prebuilt binary from a cache", not "compile". Standard nixpkgs tools come prebuilt from `cache.nixos.org`; only tools not in a cache compile locally, which here is the handful of derivations in `pkgs/`. The architecture-specific cache workflows build the environments and push them to a binary cache, so once configured, even those download prebuilt (see [`docs/ci-cd.md`](docs/ci-cd.md)).
+Creating an environment eagerly builds its whole tool closure once; `--lazy` builds each tool the first time it is called. Either way, "build" is mostly "download a prebuilt binary from a cache", not "compile". Standard nixpkgs tools come prebuilt from `cache.nixos.org`; only tools not in a cache compile locally, which here is the handful of derivations in `pkgs/`. The architecture-specific cache workflows build the environments and push them to the PentHertz binary cache, so once your machine is pointed at it, even those download prebuilt. Client setup (token, `nix.conf`, verification) is in [`docs/binary-cache.md`](docs/binary-cache.md); the CI side is in [`docs/ci-cd.md`](docs/ci-cd.md).
 
 ## OpenGL and hardware access on hosts that are not NixOS
 
