@@ -70,7 +70,7 @@ extract() {
 }
 
 # Gather normal fetchFromGitHub derivations and declarative source definitions.
-mapfile -t files < <(rg -l 'fetchFromGitHub|updateBranch[[:space:]]*=' pkgs --glob '*.nix' | sort -u)
+mapfile -t files < <(grep -rlE 'fetchFromGitHub|updateBranch[[:space:]]*=' --include='*.nix' pkgs | sort -u)
 if [[ ${#only[@]} -gt 0 ]]; then
   sel=()
   for f in "${files[@]}"; do

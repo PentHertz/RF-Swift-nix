@@ -36,9 +36,17 @@ jobs:
     outputs:
       envs: ${{ steps.catalog.outputs.envs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: catalog
-        run: echo "envs=$(jq -c '[.environments[].name]' catalog.json)" >> "$GITHUB_OUTPUT"
+        # Fail here, loudly, when the catalog yields no environment (an empty or
+        # invalid catalog.json): an empty matrix silently skips every build job
+        # and the report job then fails on a missing directory.
+        run: |
+          envs=$(jq -ce '[.environments[].name] | select(length > 0)' catalog.json) || {
+            echo "::error file=catalog.json::catalog.json has no environments (empty or invalid). Regenerate it: scripts/package-maintenance.sh catalog"
+            exit 1
+          }
+          echo "envs=$envs" >> "$GITHUB_OUTPUT"
   build:
     needs: prepare
     runs-on: ubuntu-24.04-arm
@@ -52,7 +60,7 @@ jobs:
       ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN_DEV }}
       CACHE_PUSH: ${{ secrets.ATTIC_TOKEN_DEV != '' && github.event_name != 'pull_request' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # GitHub's standard runners have ~14 GB free; an environment closure
       # pulled from the dev cache plus its build inputs can exceed that. Drop
       # the preinstalled toolchains we never use (~25 GB) before Nix starts.
@@ -63,7 +71,7 @@ jobs:
                       /usr/local/share/boost /usr/local/.ghcup /usr/share/swift "$AGENT_TOOLSDIRECTORY" || true
           sudo docker image prune --all --force > /dev/null 2>&1 || true
           df -h / | tail -1
-      - uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -106,7 +114,7 @@ jobs:
           fi
           echo "::group::attic watch-store log"; cat attic-watch.log 2>/dev/null || true; echo "::endgroup::"
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nix-cache-arm64-${{ matrix.env }}
           path: reports/${{ matrix.env }}
@@ -117,13 +125,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: nix-cache-arm64-*
           path: reports
       - run: .github/scripts/aggregate-cache-reports.sh reports cache-arm64-report.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nix-cache-arm64-report
           path: cache-arm64-report.md

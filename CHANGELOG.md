@@ -10,6 +10,9 @@ binary's v4.0.0-dev.
 
 ### Added
 
+- `scripts/package-maintenance.sh flake-update [INPUT]`: `nix flake update`
+  with the experimental features passed on the command line, so the nixpkgs
+  baseline can be moved on a stock Nix install (no nix.conf changes needed).
 - `rfswift-udev-rules` now also covers HydraSDR (vendor 38af, plus the NXP DFU
   mode); its legacy 1d50:60a1 id is already covered by the Airspy rule. So any
   environment that pulls in the consolidated rules (all the device envs) makes a
@@ -22,6 +25,13 @@ binary's v4.0.0-dev.
   its official DreamSourceLab rule from source (see Changed).
 
 ### Changed
+
+- CI: every GitHub Action is pinned by commit to its current release
+  (`actions/checkout` v7.0.1, `upload-artifact` v7.0.1, `download-artifact`
+  v8.0.1, `cachix/install-nix-action` v31.11.1, `peter-evans/create-pull-
+  request` v8.1.1, `github/codeql-action` v4.37.9, `docker/setup-qemu-action`
+  v4.3.0). The previous majors ran on Node.js 20, which GitHub is retiring
+  (every job logged a deprecation warning and was forced onto Node 24).
 
 - `dsview` is now built from source from the PentHertz DSView fork (v1.3.4)
   instead of the prebuilt amd64 .deb, reusing the nixpkgs CMake/Qt5 recipe with
@@ -209,6 +219,28 @@ binary's v4.0.0-dev.
   `docs/ci-cd.md`, `docs/updating.md`.
 
 ### Fixed
+
+- `scripts/update-sources.sh` needed ripgrep (`rg: command not found` on a
+  stock machine) to list the git-pinned packages; it now uses plain `grep`,
+  like `package-maintenance.sh` already did when `rg` is absent. The only
+  tools it still needs on the host are bash, grep, sed, awk and nix (git runs
+  through `nix run nixpkgs#git`).
+- `catalog.json` could be committed empty: the catalog app redirected `nix
+  eval` straight into the file, so when the eval failed (see above) the file
+  was truncated before the error showed, and `git add catalog.json` then
+  committed 0 bytes (f4d99e4). In CI an empty catalog gave the cache workflows
+  an empty build matrix: no build job ran and the `report` job died on
+  `find: 'reports': No such file or directory`. Three fixes: the app now
+  writes to a temporary file and renames it; the four cache workflows' prepare
+  step fails with a clear error when the catalog yields no environment; and
+  the report aggregation writes a "no report was uploaded" summary instead of
+  failing when the download step left no directory behind, so the build jobs'
+  own status tells the story.
+- `nix run .#gen-catalog` (and `scripts/package-maintenance.sh catalog`) failed
+  with `experimental Nix feature 'nix-command' is disabled` on a machine whose
+  nix.conf does not enable it: the wrapper passed the flag to the outer `nix
+  run`, but the app's own `nix eval` call did not. It does now, so the
+  catalog can be regenerated with a stock Nix install.
 
 - `angr` (reversing) now imports and is shipped in the environment instead of
   being a documented gap. This nixpkgs pin ships pycparser 3.00, which removed

@@ -400,7 +400,11 @@
             program = toString (pkgs.writeShellScript "gen-catalog" ''
               set -eu
               cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
-              ${pkgs.nix}/bin/nix eval --json --file ./gen-catalog.nix > catalog.json
+              # Write to a temporary file first: a failed eval must not leave an
+              # empty catalog.json behind (an empty catalog empties the CI build
+              # matrix and every cache workflow fails in its report job).
+              ${pkgs.nix}/bin/nix --extra-experimental-features nix-command eval --json --file ./gen-catalog.nix > catalog.json.tmp
+              mv catalog.json.tmp catalog.json
               echo "Wrote catalog.json"
             '');
           };

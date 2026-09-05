@@ -22,6 +22,7 @@ RF Swift package maintenance
   package-maintenance.sh vendor-report [--check-urls]
   package-maintenance.sh vendor-update NAME VERSION URL [--system SYSTEM]
   package-maintenance.sh catalog
+  package-maintenance.sh flake-update [INPUT]
   package-maintenance.sh audit
 
 TYPE is one of: go, rust, python, cmake, binary. See docs/adding-packages.md.
@@ -213,6 +214,9 @@ case "$command" in
   vendor-report) exec scripts/vendor-report.sh "$@" ;;
   vendor-update) vendor_update "$@" ;;
   catalog) "${nix_cmd[@]}" run "${flake_ref}#gen-catalog" ;;
+  # nix flake update with the experimental features enabled, so a stock Nix
+  # install works; an INPUT (e.g. nixpkgs) limits the update to that input.
+  flake-update) "${nix_cmd[@]}" flake update "$@" ;;
   audit) audit_repo ;;
   help|-h|--help) usage ;;
   *) usage; die "unknown command '$command'" ;;
