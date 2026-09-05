@@ -5,13 +5,13 @@
 
 proxmark3Base.overrideAttrs (old: {
   pname = "proxmark3";
-  version = "4.21611-797-b4c4edd7c";
+  version = "4.21611-1293-47d0a8fa0";
 
   src = fetchFromGitHub {
     owner = "RfidResearchGroup";
     repo = "proxmark3";
-    rev = "b4c4edd7c94a989108cacaaaf73805a28a6c217c";
-    hash = "sha256-LAgI2VY2s1WGjvkGNF2OQ/JI3yUF7GRvaZqQ/IK7Ekw=";
+    rev = "47d0a8fa00ee53d3f93c9fe00fb1a44b8180e3d3";
+    hash = "sha256-KaVrxN1auBJ0XVpWRynY4gbwuC2YhYokklah3lAJkJU=";
   };
 
   meta = (old.meta or { }) // {

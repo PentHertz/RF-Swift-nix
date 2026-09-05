@@ -6,7 +6,7 @@
 
 proxmark3.overrideAttrs (old: {
   pname = "proxmark5";
-  version = "unstable-pm5";
+  version = "4.21611-1293-47d0a8fa0";
 
   # nixpkgs' proxmark3 is too old to know PLATFORM=PM5 (Proxmark5 / Artery
   # AT32F435). Pin the upstream revision: using the moving master branch made
@@ -14,8 +14,8 @@ proxmark3.overrideAttrs (old: {
   src = fetchFromGitHub {
     owner = "RfidResearchGroup";
     repo = "proxmark3";
-    rev = "3eb0d1c7859b5fc9a038f88ec7eecd0f99084baf";
-    hash = "sha256-k7M/uS5PR+gvpazl5g6K30qHEVVKN3D40jxIx2QSY48=";
+    rev = "47d0a8fa00ee53d3f93c9fe00fb1a44b8180e3d3";
+    hash = "sha256-KaVrxN1auBJ0XVpWRynY4gbwuC2YhYokklah3lAJkJU=";
   };
 
   # Build for the Proxmark5 hardware.
