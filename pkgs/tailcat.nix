@@ -4,14 +4,14 @@
 
 (callPackage ./lib/mkGitHubTool.nix { }) {
   pname = "tailcat";
-  version = "0-unstable-2026-08-29";
+  version = "0-unstable-2026-09-05";
   build = "go";
   source = {
     owner = "tailscale";
     repo = "tailcat";
     updateBranch = "main";
-    rev = "88929418b1a3f3c74904a3136d6a9e87b1b5b9bb";
-    hash = "sha256-+VTbYZN45gUAUq/KxidxzkDMLVUK4nVw9wqBARP+x9s=";
+    rev = "5a83b9f9e119aad6b558cbc122d94efdca87452d";
+    hash = "sha256-CqkNLwJUvU8IrCrEyJjCLVYEVHrzRcKNnesGbztC7So=";
   };
   vendorHash = "sha256-3uVUHATnd2s+Axdq06/xAQ2IbzJZfP1yQ/nEopgckq0=";
   subPackages = [ "cmd/tailcat" ];
