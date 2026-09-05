@@ -3,6 +3,8 @@
 > New contributors should use the unified workflow in
 > [`adding-packages.md`](adding-packages.md). The lower-level commands below are
 > retained for bulk branch-pin maintenance and troubleshooting.
+> The one-page checklist of the whole maintenance cycle is
+> [`../MAINTAINING.md`](../MAINTAINING.md).
 
 RF Swift's Nix packages pin their sources for reproducibility, so updating a tool
 means moving a pin forward and re-pinning its content hash. There are two axes.

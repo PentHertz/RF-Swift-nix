@@ -119,6 +119,9 @@ Run `rfswift nix catalog` or `nix eval .#catalog` for the live list. At a glance
 
 ## Adding or changing an environment
 
+> Maintainer checklist (update a tool, move the nixpkgs baseline, regenerate
+> the catalog, read a red CI run): [`MAINTAINING.md`](MAINTAINING.md).
+
 1. Edit `environments.nix` (add a package attribute path, or a new environment entry).
 2. Run `nix run .#gen-catalog` to refresh `catalog.json`.
 3. `nix develop .#<env>` to try it.

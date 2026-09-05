@@ -33,6 +33,19 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  tailcat-build:
+    name: Tailcat toolchain, vendoring and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Build pinned Tailcat, including its vendored dependencies and tests
+        run: nix build --no-link -L .#pkg-tailcat
+
   prepare:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -64,6 +77,14 @@ jobs:
       - name: Force installable ${{ matrix.env }} derivation (no build)
         run: |
           nix eval --raw ".#packages.x86_64-linux.${{ matrix.env }}.drvPath"
+      - name: Check and display resolved package availability
+        env:
+          ENVIRONMENT: ${{ matrix.env }}
+        run: |
+          nix eval --json ".#availability.x86_64-linux.$ENVIRONMENT" | \
+            jq -e '.declaredCount == (.packages | length) and .presentCount == ([.packages[] | select(.status == "present")] | length)'
+          nix eval --json ".#availability.x86_64-linux.$ENVIRONMENT" | \
+            jq '[.packages[] | select(.status != "present")]'
 
   # macOS (Apple Silicon) evaluation. GitHub's macos-14 runners are arm64, so
   # this forces every environment's aarch64-darwin derivation and catches
@@ -185,23 +206,24 @@ jobs:
   required:
     name: Required Nix verification
     if: always()
-    needs: [prepare, eval-check, eval-check-darwin, build-check-darwin, catalog-sync, maintenance-audit]
+    needs: [prepare, eval-check, eval-check-darwin, build-check-darwin, tailcat-build, catalog-sync, maintenance-audit]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require every evaluation and catalog check
+      - name: Require every evaluation, build and catalog check
         env:
           PREPARE_RESULT: ${{ needs.prepare.result }}
           EVAL_RESULT: ${{ needs.eval-check.result }}
           EVAL_DARWIN_RESULT: ${{ needs.eval-check-darwin.result }}
           BUILD_DARWIN_RESULT: ${{ needs.build-check-darwin.result }}
+          TAILCAT_RESULT: ${{ needs.tailcat-build.result }}
           CATALOG_RESULT: ${{ needs.catalog-sync.result }}
           MAINTENANCE_RESULT: ${{ needs.maintenance-audit.result }}
         run: |
-          for result in "$PREPARE_RESULT" "$EVAL_RESULT" "$EVAL_DARWIN_RESULT" "$BUILD_DARWIN_RESULT" "$CATALOG_RESULT" "$MAINTENANCE_RESULT"; do
+          for result in "$PREPARE_RESULT" "$EVAL_RESULT" "$EVAL_DARWIN_RESULT" "$BUILD_DARWIN_RESULT" "$TAILCAT_RESULT" "$CATALOG_RESULT" "$MAINTENANCE_RESULT"; do
             if [ "$result" != success ]; then
               echo "::error::A required Nix verification job did not succeed."
               exit 1
             fi
           done
-          echo "All Nix evaluation and catalog checks passed."
+          echo "All Nix evaluation, build and catalog checks passed."

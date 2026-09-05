@@ -10,6 +10,17 @@ binary's v4.0.0-dev.
 
 ### Added
 
+- Platform availability manifests at `availability.<system>.<environment>` and
+  in installed environments at `share/rfswift/availability.json`, distinguishing
+  present packages, unsupported platforms, missing attributes and evaluation
+  failures. Installable environment and prerequisite builds now print omissions,
+  not only development shells.
+
+- `MAINTAINING.md`: the maintainer checklist on one page - updating git-pinned
+  packages (rev + hash), moving the nixpkgs baseline, regenerating the catalog,
+  verifying and pushing, what users run to receive an update, how to read a red
+  CI run, and the traps that have bitten us (empty catalog, ripgrep,
+  experimental features).
 - `scripts/package-maintenance.sh flake-update [INPUT]`: `nix flake update`
   with the experimental features passed on the command line, so the nixpkgs
   baseline can be moved on a stock Nix install (no nix.conf changes needed).
@@ -220,6 +231,13 @@ binary's v4.0.0-dev.
 
 ### Fixed
 
+- Tailcat's pinned 2026-09-05 revision requires Go 1.27.1, but the declarative
+  builder selected Go 1.26.7. Select a source-hash-pinned Go 1.27.1 builder when
+  the nixpkgs pin is older, and refresh the measured vendor hash. Serialize its
+  E2E test cases to avoid a shared-fixture `text file busy` failure in the Nix
+  sandbox, keeping the tests enabled. This addresses the `network` cache failure
+  first reported against commit `443368e`. Its full package build is now part
+  of the required Nix CI verification.
 - `scripts/update-sources.sh` needed ripgrep (`rg: command not found` on a
   stock machine) to list the git-pinned packages; it now uses plain `grep`,
   like `package-maintenance.sh` already did when `rg` is absent. The only

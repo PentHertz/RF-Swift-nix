@@ -41,6 +41,7 @@ if spec.build == "go" then
       vendorHash = spec.vendorHash;
       subPackages = spec.subPackages or [ ];
       ldflags = spec.ldflags or [ ];
+      checkFlags = spec.checkFlags or [ ];
     })
 else if spec.build == "rust" then
   rustPlatform.buildRustPackage

@@ -253,7 +253,7 @@
       # tryEval guards against nixpkgs "throwing aliases" (a renamed/removed
       # package whose attribute still exists but raises on access, e.g.
       # dump1090 -> dump1090-fa). Those are treated as absent, not fatal.
-      resolvePkg = pkgs: custom: name:
+      resolvePkgResult = pkgs: custom: name:
         let
           raw =
             if builtins.hasAttr name custom then custom.${name}
@@ -267,9 +267,17 @@
           # instead of making the entire environment impossible to evaluate.
           forced = if available then builtins.tryEval t.value.drvPath else { success = false; };
         in
-        if available && forced.success
-        then t.value
-        else null;
+        {
+          drv = if available && forced.success then t.value else null;
+          status =
+            if !t.success then "evaluation-failed"
+            else if t.value == null then "missing"
+            else if !available then "unsupported-platform"
+            else if !forced.success then "dependency-evaluation-failed"
+            else "present";
+        };
+
+      resolvePkg = pkgs: custom: name: (resolvePkgResult pkgs custom name).drv;
 
       resolveEnv = system: env:
         let
@@ -280,17 +288,23 @@
           resolved = assert lib.assertMsg
             (lib.all (name: builtins.elem name declared) prerequisites)
             "RF-Swift-nix: every prerequisite must also be listed in packages";
-            map (name: { inherit name; drv = resolvePkg pkgs custom name; }) declared;
+            map (name: { inherit name; } // resolvePkgResult pkgs custom name) declared;
           present = builtins.filter (x: x.drv != null) resolved;
           absent = builtins.filter (x: x.drv == null) resolved;
           note = lib.optionalString (absent != [ ])
             (builtins.trace
-              "RF-Swift-nix: ${builtins.toString (builtins.length absent)} package(s) unavailable on ${system}: ${lib.concatMapStringsSep ", " (x: x.name) absent}"
+              "RF-Swift-nix: ${builtins.toString (builtins.length absent)} package(s) omitted on ${system}: ${lib.concatMapStringsSep ", " (x: "${x.name} (${x.status})") absent}"
               "");
         in
         {
           drvs = map (x: x.drv) present;
           absent = map (x: x.name) absent;
+          manifest = {
+            inherit system;
+            declaredCount = builtins.length declared;
+            presentCount = builtins.length present;
+            packages = map (x: { inherit (x) name status; }) resolved;
+          };
           _note = note;
         };
 
@@ -322,11 +336,16 @@
           # RF Swift engine can enable it on any other distribution.
           glRuntime = lib.optional pkgs.stdenv.hostPlatform.isLinux (customFor system).rfswift-gl;
         in
-        pkgs.buildEnv {
+        builtins.seq r._note (pkgs.buildEnv {
           name = "rfswift-${name}";
           paths = r.drvs ++ glRuntime;
           ignoreCollisions = true;
-        };
+          passthru.availability = r.manifest;
+          postBuild = ''
+            mkdir -p "$out/share/rfswift"
+            cp ${pkgs.writeText "rfswift-${name}-availability.json" (builtins.toJSON r.manifest)} "$out/share/rfswift/availability.json"
+          '';
+        });
 
       # A separately addressable prerequisite closure used by the RF Swift CLI
       # to realise runtime libraries/device plugins before user applications.
@@ -335,16 +354,21 @@
           pkgs = pkgsFor system;
           custom = customFor system;
           names = env.prerequisites or [ ];
-          resolved = map (n: resolvePkg pkgs custom n) names;
+          r = resolveEnv system (env // { packages = names; prerequisites = names; });
         in
-        pkgs.buildEnv {
+        builtins.seq r._note (pkgs.buildEnv {
           name = "rfswift-${name}-prerequisites";
-          paths = builtins.filter (p: p != null) resolved;
+          paths = r.drvs;
+          passthru.availability = r.manifest;
           ignoreCollisions = true;
-        };
+        });
     in
     {
       version = "1.0.0-dev";
+      # Machine-readable platform support, including omissions and their cause.
+      # Example: nix eval --json .#availability.aarch64-darwin.bluetooth
+      availability = forAllSystems (system:
+        lib.mapAttrs (_: env: (resolveEnv system env).manifest) environments);
       # devShells.<system>.<image> - entered with `nix develop .#<image>`
       devShells = forAllSystems (system:
         lib.mapAttrs (name: env: mkShellFor system name env) environments
