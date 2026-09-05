@@ -45,6 +45,11 @@ jobs:
             experimental-features = nix-command flakes
       - name: Build pinned Tailcat, including its vendored dependencies and tests
         run: nix build --no-link -L .#pkg-tailcat
+      # Nix only echoes the builder's last 25 lines; a failing Go test suite
+      # needs more than that to be read (which test, its own output).
+      - name: Show the full Tailcat build log
+        if: failure()
+        run: nix log .#pkg-tailcat 2>/dev/null | tail -n 400 || true
 
   prepare:
     runs-on: ubuntu-latest

@@ -231,6 +231,20 @@ binary's v4.0.0-dev.
 
 ### Fixed
 
+- Installable environments failed to build on Linux after the availability
+  manifest was added: it was copied from `buildEnv`'s `postBuild` into
+  `share/rfswift`, a directory that only `rfswift-gl` provides in most
+  environments, so `buildEnv` had linked it straight into that package's
+  store path and the copy hit "Permission denied" (`sdr_full` and `sdr_light`
+  passed only because `libresdr-firmware` provides the directory as well). The
+  manifest is now a package of its own merged into the environment, which
+  makes `share/rfswift` a real directory in every case.
+
+- `build-cache-report.sh` understands the error format of Nix 2.30+ (the
+  install-nix-action v31 bump): "error: Cannot build '<drv>'." followed by an
+  indented reason and the builder's last log lines. The job summary now shows
+  that block; before, a failed environment was reported without any cause.
+
 - Tailcat's pinned 2026-09-05 revision requires Go 1.27.1, but the declarative
   builder selected Go 1.26.7. Select a source-hash-pinned Go 1.27.1 builder when
   the nixpkgs pin is older, and refresh the measured vendor hash. Serialize its

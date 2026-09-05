@@ -47,15 +47,21 @@ jq -n \
     # Besides builder failures, catch the non-builder ways a derivation fails:
     # a substitute (cache download) that could not be fetched, a fixed-output
     # hash mismatch (moving upstream git ref), or the runner disk filling up.
-    LC_ALL=C grep -aiE '^error: (builder for|[0-9]+ dependencies of derivation|some substitutes for|hash mismatch|unable to download|cannot build|writing to file)|no space left on device|exceeded the maximum execution time' "$log" | tail -40 \
-      || echo "(no 'error: builder for' line - the build was killed or ran out of time/space)"
+    # Nix 2.30+ (install-nix-action v31) says "error: Cannot build '<drv>'."
+    # and gives the cause on the next, indented "Reason:" line; older Nix
+    # says "error: builder for '<drv>' failed".
+    LC_ALL=C grep -aiE '^error: (builder for|[0-9]+ dependencies of derivation|some substitutes for|hash mismatch|unable to download|cannot build|writing to file)|^ +Reason: |no space left on device|exceeded the maximum execution time' "$log" | tail -60 \
+      || echo "(no 'error: Cannot build' / 'error: builder for' line - the build was killed or ran out of time/space)"
     echo '```'
     # For each failed builder, its own last lines (the test summary / compiler
-    # error), keyed on the "<pname>> " log prefix nix uses with -L.
+    # error). Nix 2.30+ prints them itself, in an indented block under
+    # "error: Cannot build" (reason, output paths, "Last N log lines"); older
+    # Nix leaves us to key on the "<pname>> " log prefix nix uses with -L.
     echo
     echo "## Failure context"
     echo
     echo '```text'
+    LC_ALL=C awk '/^error: Cannot build /{p=1; print; next} p && /^[[:space:]]/{print; next} {p=0}' "$log" | head -400
     LC_ALL=C grep -aoE "^error: builder for '/nix/store/[^']+\.drv'" "$log" \
       | sed -E "s#^error: builder for '/nix/store/[a-z0-9]{32}-(.+)\.drv'#\1#" | sort -u | head -10 \
       | while IFS= read -r drv; do

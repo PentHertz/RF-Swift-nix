@@ -126,6 +126,7 @@ github:PentHertz/RF-Swift-nix` clears it.
 |---|---|---|
 | Only `prepare` and `report` jobs exist; report fails on `find: 'reports': No such file or directory` | `catalog.json` is empty or has no environments, so the build matrix was empty | `scripts/package-maintenance.sh catalog`, commit. The prepare step now fails with a clear error instead. |
 | `build (<env>)` red, `report` green with a table | a real build failure in that environment | open the job, find the first failed `.drv`; classes in [`docs/ci-cd.md`](docs/ci-cd.md#diagnosing-failures) |
+| Almost every Linux `build (<env>)` red within a minute or two, the only failed `.drv` is `rfswift-<env>.drv` itself, macOS green | the environment's `buildEnv` step failed, not a tool: everything was fetched from the cache and the final merge broke (last seen with a `postBuild` writing into `share/rfswift`, a directory `buildEnv` links straight into `rfswift-gl`'s store path when no second package provides it) | read the "Failure context" block of the summary (Nix's own last log lines); reproduce with `nix build .#packages.x86_64-linux.<env>`, which only needs the cache, not a rebuild |
 | `catalog-sync` red | committed `catalog.json` differs from `environments.nix` | step 3 |
 | `attic login`/push red, builds green | cache token expired or wrong host | [`docs/ci-cd.md`](docs/ci-cd.md#self-hosted-attic-cache-dev--release) |
 | "Node.js 20 is deprecated" at the end of a job | informational; an action still on an old major | pin the action to its current release by commit (see the workflows for the format) |
@@ -143,6 +144,16 @@ github:PentHertz/RF-Swift-nix` clears it.
   wrappers, which always pass them. Never a reason to `sudo` anything.
 - **`--write` says "unchanged" for a package `check` reported as behind.** A
   previous `--write` already moved it; look at `git status`.
+- **Writing into `$out` from `buildEnv`'s `postBuild`.** `buildEnv` links a
+  directory that a single package provides straight into that package's store
+  path (read-only); only when two packages provide it does it become a real
+  directory. Anything the environment must ship goes in as a package of its
+  own (`writeTextFile` with a `destination`), merged like the tools.
+- **`error: Cannot build '<drv>'.`** is how Nix 2.30+ (install-nix-action v31)
+  words what used to be `error: builder for '<drv>' failed`. The cause is on
+  the indented `Reason:` line below it, followed by the builder's last log
+  lines; a `Reason: N dependencies failed` entry is only the parent of the
+  real failure, look for the other `Cannot build` line.
 - **`update` (nix-update) succeeds but the build breaks.** Version bumps can
   need new dependencies or patches; `git diff` the package, read the build log,
   compare with upstream's release notes.

@@ -335,16 +335,24 @@
           # Mesa runtime (pkgs/rfswift-gl.nix) in every Linux environment so the
           # RF Swift engine can enable it on any other distribution.
           glRuntime = lib.optional pkgs.stdenv.hostPlatform.isLinux (customFor system).rfswift-gl;
+          # The manifest is merged into the environment as a package of its
+          # own. It must not be written from postBuild: when a directory is
+          # provided by a single package (share/rfswift comes from rfswift-gl
+          # alone in most environments), buildEnv links that directory straight
+          # into the package's store path, and a copy into it fails with
+          # "Permission denied". A second provider makes buildEnv create a real
+          # directory holding links to both.
+          manifest = pkgs.writeTextFile {
+            name = "rfswift-${name}-availability";
+            destination = "/share/rfswift/availability.json";
+            text = builtins.toJSON r.manifest;
+          };
         in
         builtins.seq r._note (pkgs.buildEnv {
           name = "rfswift-${name}";
-          paths = r.drvs ++ glRuntime;
+          paths = r.drvs ++ glRuntime ++ [ manifest ];
           ignoreCollisions = true;
           passthru.availability = r.manifest;
-          postBuild = ''
-            mkdir -p "$out/share/rfswift"
-            cp ${pkgs.writeText "rfswift-${name}-availability.json" (builtins.toJSON r.manifest)} "$out/share/rfswift/availability.json"
-          '';
         });
 
       # A separately addressable prerequisite closure used by the RF Swift CLI
