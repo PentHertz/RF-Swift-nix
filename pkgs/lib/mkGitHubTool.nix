@@ -42,6 +42,7 @@ if spec.build == "go" then
       subPackages = spec.subPackages or [ ];
       ldflags = spec.ldflags or [ ];
       checkFlags = spec.checkFlags or [ ];
+      doCheck = spec.doCheck or true;
     })
 else if spec.build == "rust" then
   rustPlatform.buildRustPackage

@@ -250,8 +250,17 @@ binary's v4.0.0-dev.
   the nixpkgs pin is older, and refresh the measured vendor hash. Serialize its
   E2E test cases to avoid a shared-fixture `text file busy` failure in the Nix
   sandbox, keeping the tests enabled. This addresses the `network` cache failure
-  first reported against commit `443368e`. Its full package build is now part
-  of the required Nix CI verification.
+  first reported against commit `443368e`.
+- Tailcat's end-to-end tests no longer run inside the Nix sandbox. They
+  compile a fixture, start a loopback DERP relay and expect a client and a
+  server process to complete a WireGuard handshake within 10 s; on GitHub's
+  runners that timed out in all three cache and CI runs of 2026-09-05
+  (`TestServeWithoutPSK`, then the forward test) while the same derivation
+  passed on a workstation. Upstream runs the suite in its own CI, so the
+  package sets `doCheck = false`; the declarative Go builder now accepts
+  `doCheck`. The dedicated "Tailcat toolchain, vendoring and tests" CI job is
+  gone: the cache-amd64 network build already builds the same derivation on
+  every push and pull request.
 - `scripts/update-sources.sh` needed ripgrep (`rg: command not found` on a
   stock machine) to list the git-pinned packages; it now uses plain `grep`,
   like `package-maintenance.sh` already did when `rg` is absent. The only

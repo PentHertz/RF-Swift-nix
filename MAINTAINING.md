@@ -154,6 +154,11 @@ github:PentHertz/RF-Swift-nix` clears it.
   the indented `Reason:` line below it, followed by the builder's last log
   lines; a `Reason: N dependencies failed` entry is only the parent of the
   real failure, look for the other `Cannot build` line.
+- **A Go tool's tests pass on your machine and fail on the runner.** GitHub's
+  runners are slower and their Nix sandbox is loopback-only; suites that spawn
+  processes and expect a handshake within a deadline (tailcat's DERP relay
+  tests) time out there. Do not chase the timing: set `doCheck = false` in the
+  spec, upstream runs its own suite.
 - **`update` (nix-update) succeeds but the build breaks.** Version bumps can
   need new dependencies or patches; `git diff` the package, read the build log,
   compare with upstream's release notes.

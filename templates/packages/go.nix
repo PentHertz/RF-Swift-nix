@@ -15,6 +15,9 @@
   };
   vendorHash = lib.fakeHash;
   subPackages = [ ];
+  # Set to false when the upstream suite needs a network, a relay or a display
+  # that the Nix sandbox cannot provide (see pkgs/tailcat.nix).
+  doCheck = true;
   description = "TODO: describe @NAME@";
   license = "mit";
 }
