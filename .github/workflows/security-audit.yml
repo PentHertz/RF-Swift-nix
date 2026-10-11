@@ -32,10 +32,11 @@ on:
         type: string
         default: stdout,txt,json,html,pdf
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'v*-dev' ]
     paths:
       - 'pkgs/**'
       - 'environments.nix'
+      - 'common-packages.nix'
       - 'flake.nix'
       - 'flake.lock'
       - 'scripts/security-audit.sh'

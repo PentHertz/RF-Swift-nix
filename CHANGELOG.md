@@ -8,6 +8,78 @@ Keep a Changelog (https://keepachangelog.com). Dates are ISO-8601.
 First development line of the RF Swift Nix engine flake, tracking the RF Swift
 binary's v4.0.0-dev.
 
+### Synced with RF-Swift-images v1.1.2
+
+Everything RF-Swift-images added or bumped between v1.1.1 and v1.1.2.
+
+Changed:
+
+- nixpkgs moved to nixos-unstable 2026-10-10 (`6510408d`), which brings the
+  toolchains the images bumped: Go 1.27.2 (`go_1_27`, used by nerva and titus;
+  the environments' default `go` is nixpkgs' 1.26.8) and uv 0.12.22 (images:
+  0.12.24, not yet in nixpkgs). Every environment and `pkg-*` still evaluates
+  on x86_64/aarch64/riscv64 Linux and aarch64-darwin; the bump drops no
+  package and restores apksigner and luaradio-hydrasdr on riscv64.
+- Signal Hound SDK 08_26_26 -> 09_14_26, Spike 4.0.16 -> 4.0.17 and VSG60
+  2.0.3 -> 2.0.5. Signal Hound renamed the Spike/VSG archives to
+  `(Ubuntu_x64)`, so their version probes and platform paths follow; the VSG
+  probe now reads the software page, where the download links moved.
+- `ghidra` (ghidra-latest) 12.1.3 -> 12.1.4.
+- `burpsuite` 2026.9.1, the release the images install: a local copy of the
+  nixpkgs recipe (which is at 2026.8 and pins its version in a `let`), now
+  declared Linux-only since it is a buildFHSEnv.
+
+Added:
+
+- `common-packages.nix`: the baseline every environment ships, shared by
+  flake.nix and gen-catalog.nix. Besides python3/uv/go it now carries the CLI
+  utilities of the images' corebuild `common_utils_install` (delta, hexyl,
+  xxd, colordiff, jq, yq, ripgrep, fd, bat, tmux, mc, btop, htop, ncdu, pv, 7zz,
+  zstd, lsof, strace, ltrace, openssh, net-tools, traceroute, dnsutils, xclip,
+  xsel, ...). meld and recoll are left to the host desktop, and iputils /
+  util-linux are left out because a store copy would shadow the host's setuid
+  or capability-carrying binaries (ping, mount, su).
+- New tools, from nixpkgs: `coercer` (ad); `mitmproxy`, `libimobiledevice`,
+  `ideviceinstaller`, `usbmuxd`, `libusbmuxd`, `ifuse`, `ipsw` (android, iOS
+  side); `python3Packages.udsoncan` (automotive); `crackle` (bluetooth);
+  `net-snmp`, `samba` (network: the snmpwalk/smbclient AutoRecon's plugins
+  call); `tio`, `python3Packages.pyftdi`, `glasgow` (hardware); `pwntools`,
+  `capa`, `flare-floss`, `detect-it-easy` (reversing); `mfoc-hardnested`,
+  `global-platform-pro`, `qFlipper` (rfid); `python3Packages.rfcat`,
+  `killerbee` (sdr_light, sdr_full); `qcsuper` (telecom, telecom_5g_bladerf).
+- New tools, built here (not in nixpkgs), each matching its image installer:
+  `targetedkerberoast` (ad); `reflutter` (android); `python3Packages.doipclient`
+  and `icsim` (automotive; ICSim's artwork path is compiled in, so it runs from
+  any directory); `sweyntooth` (bluetooth; `sweyntooth --list`, the patched
+  scapy it bundles, and the dongle firmware via `sweyntooth --firmware`);
+  `baudrate` (hardware, RF Swift's serial baud-rate finder); `phoneinfoga`
+  (osint, upstream release binaries, as nixpkgs dropped it) and `blackbird`
+  (osint; state under `$XDG_DATA_HOME/blackbird`, reports in `./results`);
+  `bytecaster` (reversing, `ByteCaster`); `ufbt` (rfid); `hostapd-wpe`
+  (hostapd 2.11 + aircrack-ng's WPE patch, with a config that works from the
+  store), `wpa-sycophant` and `eap-buster` (wifi).
+- `python3Packages.chipwhisperer` (hardware): NewAE's ChipWhisperer API, which
+  nixpkgs marks broken because 5.x and PyPI's 6.0.0 pin NumPy 1.26. Built from
+  upstream's NumPy 2 line (tag `sca101_release`, 6.0.0) with its bundled FPGA
+  bitstreams and MCU firmware (named in a MANIFEST.in, since setuptools-scm
+  cannot list them without .git, and checked at build time) and a uaccess udev
+  rule for NewAE devices.
+- Two environments for the images' new telecom images, each with the
+  telecom_utils set:
+  - `telecom_5g_oai`: OpenAirInterface 5G v2.4.0 (`openairinterface5g`:
+    `nr-softmodem`, `nr-uesoftmodem`, `nr-cuup`, the USRP/rfsim plugins it
+    dlopen()s, and the sample configs in `share/openairinterface5g/conf`) with
+    the Open5GS core. Built with CMake/Ninja exactly as `build_oai --gNB --nrUE
+    -w USRP` would, against the asn1c fork and SIMDE commit OAI pins.
+  - `telecom_ltesniffer`: LTESniffer (`ltesniffer`), with its srsRAN 4G fork
+    pinned instead of cloned at configure time, and UHD and bladeRF radios.
+  Both are x86_64-linux and target x86-64-v3 (AVX2/FMA; OAI also needs
+  PCLMUL) instead of upstream's `-march=native`, which would tie the binary to
+  the CPU that built it.
+- Documented gaps: BlueToolkit (bluetooth; a root-only system installer) and
+  RFQuack (sdr_full; ESP32 firmware that PlatformIO builds by downloading
+  toolchains).
+
 ### Added
 
 - Platform availability manifests at `availability.<system>.<environment>` and
@@ -37,6 +109,11 @@ binary's v4.0.0-dev.
 
 ### Changed
 
+- CI: development-line branches matching `v*-dev` (`v1.1.0-dev`, ...) are
+  first-class: pushes to them and pull requests into them run `ci.yml`, the
+  four cache workflows (riscv64 and darwin included) and the security audit,
+  exactly as for `main`. The pattern is a branch filter, so it never matches
+  the `v*` release tags.
 - CI: every GitHub Action is pinned by commit to its current release
   (`actions/checkout` v7.0.1, `upload-artifact` v7.0.1, `download-artifact`
   v8.0.1, `cachix/install-nix-action` v31.11.1, `peter-evans/create-pull-

@@ -17,14 +17,15 @@
 # aarch64-darwin only: GitHub retired its Intel macOS runners, so x86_64-darwin
 # stays evaluation-only (ci.yml). macOS runners are scarce (a handful run
 # concurrently) and the SDR closures take hours, so like riscv64 this runs for
-# main, tags and manual dispatch rather than every branch push.
+# main, the v*-dev development branches, tags and manual dispatch rather
+# than every branch push.
 name: Cache darwin
 on:
   push:
-    branches: [main]
+    branches: [main, 'v*-dev']
     tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, 'v*-dev']
   workflow_dispatch:
 permissions:
   contents: read

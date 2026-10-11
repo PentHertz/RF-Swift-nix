@@ -14,10 +14,12 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    # main plus the development-line branches (v1.1.0-dev, ...). The branch
+    # filter never matches tags, so `v*-dev` cannot collide with `v*` tags.
+    branches: [ main, 'v*-dev' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'v*-dev' ]
   # Required checks must also run against the synthetic commit produced by a
   # GitHub merge queue, otherwise the queue waits forever for a missing check.
   merge_group:
@@ -26,7 +28,7 @@ on:
 permissions:
   contents: read
 
-# A new commit makes an older PR run obsolete. Main/tag builds are never
+# A new commit makes an older PR run obsolete. Branch/tag builds are never
 # cancelled because they may be publishing paths to the binary cache.
 concurrency:
   group: nix-ci-${{ github.workflow }}-${{ github.ref }}

@@ -26,8 +26,9 @@ fork pull requests receive no credential and build without the cache.
 
 The repository's `CI` workflow is both the ground-truth build gate and the Nix
 delivery pipeline. Pull requests prove that the definitions still evaluate and
-that every complete environment closure builds. Trusted pushes to `main` and
-version tags run the same checks and publish the resulting Nix store paths to
+that every complete environment closure builds. Trusted pushes to `main`, to
+the development-line branches (`v*-dev`, e.g. `v1.1.0-dev`) and version tags
+run the same checks and publish the resulting Nix store paths to
 the `dev` cache; a version tag then promotes them to `release`
 (`promote-release.yml`), so users normally download binaries rather than
 compiling locally.
@@ -60,9 +61,14 @@ The cache is the attic server described in `nix-cache-infra/`
 tokens).
 
 - `cache-amd64.yml` and `cache-arm64.yml` run on every branch push, `v*` tags,
-  and fork pull requests. `cache-riscv64.yml` (QEMU user-mode, slow) and
-  `cache-darwin.yml` (scarce macOS runners, long SDR builds) run only for
-  `main`, tags and manual dispatch.
+  and pull requests into `main` or a `v*-dev` branch. `cache-riscv64.yml`
+  (QEMU user-mode, slow) and `cache-darwin.yml` (scarce macOS runners, long SDR
+  builds) run only for `main`, `v*-dev` branches, tags and manual dispatch.
+- `ci.yml` and `security-audit.yml` treat a `v*-dev` branch like `main`: pushes
+  to it and pull requests into it run the full checks. Branch filters never
+  match tags, so `v*-dev` does not collide with the `v*` release tags. Scheduled
+  runs (weekly audit, maintenance updates) only ever run on the default branch;
+  use **Run workflow** with the dev branch selected to run them there.
 - Every environment job pulls from `dev`, uploads store paths while it builds,
   and pushes its closure when done. A failed environment still leaves its
   finished dependencies in the cache, so the next run resumes there.
@@ -90,9 +96,10 @@ Pointing a developer machine or an RF Swift user at the cache is covered in
 4. Point your own machine at `dev` (see [`binary-cache.md`](binary-cache.md))
    so local builds reuse what CI already compiled.
 5. Under **Settings → Rules → Rulesets** (or branch protection), protect
-   `main`, require pull requests, and require the status check
+   `main` and the `v*-dev` branches (one ruleset can target both patterns),
+   require pull requests, and require the status check
    **Required Nix verification**. Requiring the single aggregate check avoids
-   maintaining 14 matrix check names in the ruleset.
+   maintaining one matrix check name per environment in the ruleset.
 6. Optionally enable GitHub's merge queue. The workflow listens for
    `merge_group`, so the required check is rerun on the exact synthetic commit
    that the queue intends to merge.
@@ -105,11 +112,11 @@ to the cache.
 
 | Event | Evaluate/catalog | Build + command smoke | Push to dev cache |
 |---|---:|---:|---:|
-| Pull request | yes | all 14 environments | no |
-| Merge queue | yes | all 14 environments | no |
-| Push to any branch | yes | all 14 environments (riscv64, darwin: `main` only) | yes |
-| Tag matching `v*` | yes | all 14 environments | yes, then promoted to release |
-| Manual dispatch | yes | all 14 environments | yes |
+| Pull request | yes | every catalog environment | no |
+| Merge queue | yes | every catalog environment | no |
+| Push to any branch | yes (`main`, `v*-dev`) | every catalog environment (riscv64, darwin: `main`, `v*-dev` only) | yes |
+| Tag matching `v*` | yes | every catalog environment | yes, then promoted to release |
+| Manual dispatch | yes | every catalog environment | yes |
 
 The matrix uses at most four runners concurrently and gives each environment
 two hours. `fail-fast` is disabled so one bad package does not hide failures in

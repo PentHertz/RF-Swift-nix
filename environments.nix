@@ -116,6 +116,10 @@
       "signalhound-spike"
       "signalhound-vsg60"
       "sastudio"
+      # Sub-GHz and 802.15.4 attack dongles: rfcat (YARD Stick One and other
+      # CC1111 dongles) and KillerBee (Zigbee / IEEE 802.15.4).
+      "python3Packages.rfcat"
+      "killerbee"
     ];
     # Remaining device modules present in the image scripts but not yet
     # reproducibly packaged for Nix are explicit rather than silently claimed.
@@ -252,6 +256,9 @@
       "sastudio"
       "kc908"
       "kc908-sdk"
+      # sdr_light's sub-GHz / 802.15.4 dongle tools (the image builds on it).
+      "python3Packages.rfcat"
+      "killerbee"
     ];
     # The full GNU Radio OOT set RF Swift ships (RF-Swift-images
     # scripts/gr_oot_modules.sh) is bundled into gnuradio-rfswift and appears in
@@ -304,6 +311,7 @@
       "KCSDI (Deepace, prebuilt AppImage)"
       "Artemis (prebuilt binary)"
       "FISSURE (RF framework; large pinned pip/apt install into a system venv)"
+      "RFQuack (ESP32 firmware built with PlatformIO, which downloads its toolchains during the build)"
     ];
   };
 
@@ -370,6 +378,12 @@
       "milazycracker"
       "rfidler"
       "nfc-laboratory"
+      # MIFARE Classic hardnested attack, PC/SC + GlobalPlatformPro (`gp`) for
+      # smartcards, and the Flipper Zero tools (ufbt SDK tool, qFlipper).
+      "mfoc-hardnested"
+      "global-platform-pro"
+      "ufbt"
+      "qFlipper"
     ];
     missing = [ ];
   };
@@ -423,6 +437,12 @@
       "dragonslayer"
       "dragondrain-and-time"
       "pyrit"
+      # WPA-Enterprise: rogue RADIUS credential capture (hostapd-wpe), EAP
+      # relaying with hostapd-mana's enable_sycophant (wpa_sycophant), and
+      # probing which EAP methods a network accepts (EAP_buster).
+      "hostapd-wpe"
+      "wpa-sycophant"
+      "eap-buster"
     ];
     missing = [ ];
   };
@@ -466,8 +486,14 @@
       # BLERP: BLE re-pairing attacks PoC. Ships the pinned nRF firmware; its
       # `blerp-mitm` launcher builds the custom-Scapy-fork venv with uv.
       "blerp"
+      # BLE legacy-pairing key recovery, and the SweynTooth BLE attack suite
+      # (needs an nRF52840 dongle flashed with its bundled firmware).
+      "crackle"
+      "sweyntooth"
     ];
-    missing = [ ];
+    missing = [
+      "BlueToolkit (its installer is a root-only system setup: apt packages, /usr/share install, PulseAudio and bluetoothd reconfiguration)"
+    ];
   };
 
   ######################################################################
@@ -579,6 +605,9 @@
       "payloadsallthethings"
       "enum4linux"
       "autorecon"
+      # AutoRecon's default plugins shell out to snmpwalk and smbclient.
+      "net-snmp"
+      "samba"
       "sstimap"
       "ssrfmap"
       "sippts"
@@ -671,6 +700,12 @@
       "pwndbg"
       "dsview"
       "angr"
+      # Exploit development and binary triage
+      "bytecaster"
+      "pwntools"
+      "capa"
+      "flare-floss"
+      "detect-it-easy"
     ];
     # Ghidra itself is present (stable `ghidra`); ghidra-latest is a packaged
     # opt-in (pkg-ghidra-latest) for the newest upstream release, not a gap.
@@ -721,6 +756,15 @@
       "dsview"
       "saleae-logic2"
       "hydranfc-sniffer-decoder"
+      # Serial terminals (picocom/minicom above, tio) and a baud-rate finder,
+      # FTDI MPSSE (SPI/I2C/JTAG/UART on FT232H/FT2232H boards such as the
+      # Tigard), the Glasgow Interface Explorer, and the ChipWhisperer API for
+      # side-channel power analysis and fault injection.
+      "tio"
+      "baudrate"
+      "python3Packages.pyftdi"
+      "glasgow"
+      "python3Packages.chipwhisperer"
     ];
     missing = [ ];
   };
@@ -743,6 +787,11 @@
       "cantact"
       "v2ginjector"
       "wireshark"
+      # UDS and DoIP diagnostics clients, and ICSim (instrument cluster
+      # simulator on a virtual CAN bus) for practice.
+      "python3Packages.udsoncan"
+      "python3Packages.doipclient"
+      "icsim"
     ];
     missing = [ ];
   };
@@ -776,6 +825,8 @@
       "gowitness"
       "sublist3r"
       "spiderfoot"
+      "phoneinfoga"
+      "blackbird"
     ];
     missing = [ ];
   };
@@ -784,7 +835,7 @@
   # Mobile / Android
   ######################################################################
   android = {
-    description = "Android / mobile: adb/fastboot, apktool, frida, androguard, scrcpy, jadx and reversing tools.";
+    description = "Android / mobile: adb/fastboot, apktool, frida, androguard, scrcpy, jadx, mitmproxy and reversing tools, plus iOS device tooling.";
     category = "Mobile";
     prerequisites = [ "android-tools" ];
     packages = [
@@ -806,6 +857,16 @@
       "drozer"
       "smali"
       "mobsf"
+      "mitmproxy"
+      "reflutter"
+      # iOS: libimobiledevice utilities (ideviceinfo, idevicesyslog, ...),
+      # app install, usbmuxd + iproxy, ifuse, and ipsw (firmware/research).
+      "libimobiledevice"
+      "ideviceinstaller"
+      "usbmuxd"
+      "libusbmuxd"
+      "ifuse"
+      "ipsw"
     ];
     missing = [ ];
   };
@@ -834,6 +895,8 @@
       "donpapi"
       "lsassy"
       "bloodyad"
+      "coercer"
+      "targetedkerberoast"
     ];
     missing = [ ];
   };
@@ -889,6 +952,7 @@
       "pysim"
       "modmobmap"
       "scat"
+      "qcsuper"
       "sigploit"
       "jss7"
       "5greplay"
@@ -951,12 +1015,80 @@
       "pysctp"
       "sysmo-usim-tool"
       "scat"
+      "qcsuper"
       "sigploit"
       "jss7"
       "modmobmap"
       "bromelia"
       "py5sig"
       # Analysis extras of the image
+      "wireshark"
+      "wireshark-cli"
+      "telecom-wireshark-dissectors"
+      "nmap"
+      "jupyter"
+    ];
+    missing = [ ];
+  };
+
+  telecom_5g_oai = {
+    description = "5G SA with OpenAirInterface: OAI gNB and nrUE soft-modems over UHD (USRP), Open5GS core, and the telecom utility set (telecom_5G_oai image).";
+    category = "Telecom";
+    prerequisites = [ "uhd" "lksctp-tools" ];
+    packages = [
+      # Radio and transport libraries precede the RAN.
+      "uhd"
+      "lksctp-tools"
+      # 5G SA RAN (nr-softmodem / nr-uesoftmodem) + core. The OCUDU-based 5G
+      # stack stays in the `telecom` environment, as in the images.
+      "openairinterface5g"
+      "open5gs"
+      # telecom_utils tools the image inherits
+      "python3Packages.pycrate"
+      "cryptomobile"
+      "pysim"
+      "pysctp"
+      "sysmo-usim-tool"
+      "scat"
+      "qcsuper"
+      "sigploit"
+      "jss7"
+      "modmobmap"
+      "bromelia"
+      "py5sig"
+      # Analysis extras
+      "wireshark"
+      "wireshark-cli"
+      "telecom-wireshark-dissectors"
+      "nmap"
+      "jupyter"
+    ];
+    missing = [ ];
+  };
+
+  telecom_ltesniffer = {
+    description = "Passive LTE downlink/uplink sniffing with LTESniffer on a USRP, plus the telecom utility set (telecom_ltesniffer image).";
+    category = "Telecom";
+    prerequisites = [ "uhd" ];
+    packages = [
+      "uhd"
+      # Kept in its own environment, as in the images, so its srsRAN-derived
+      # build stays separate from the telecom environment's srsRAN.
+      "ltesniffer"
+      # telecom_utils tools the image inherits
+      "python3Packages.pycrate"
+      "cryptomobile"
+      "pysim"
+      "pysctp"
+      "sysmo-usim-tool"
+      "scat"
+      "qcsuper"
+      "sigploit"
+      "jss7"
+      "modmobmap"
+      "bromelia"
+      "py5sig"
+      # Analysis extras
       "wireshark"
       "wireshark-cli"
       "telecom-wireshark-dissectors"

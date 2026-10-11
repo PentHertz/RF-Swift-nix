@@ -17,7 +17,7 @@ on:
     branches: ['**']
     tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, 'v*-dev']
   workflow_dispatch:
 permissions:
   contents: read

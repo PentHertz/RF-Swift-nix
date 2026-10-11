@@ -16,6 +16,7 @@ Docker gives you an isolated image. Nix gives you a reproducible set of tools in
 
 ```
 environments.nix     the catalog as pure data: image -> package list (single source of truth)
+common-packages.nix  baseline tools every environment ships (toolchains + corebuild CLI utilities)
 gen-catalog.nix      turns environments.nix into catalog.json
 catalog.json         machine-readable index the RF Swift binary reads (generated)
 flake.nix            builds devShells / profiles from environments.nix + pkgs/

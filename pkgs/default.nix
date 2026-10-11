@@ -122,6 +122,7 @@ RULES
   x64dbg = callPackage ./x64dbg.nix { wine = pkgs.wineWow64Packages.stable; };
   ollydbg = callPackage ./ollydbg.nix { wine = pkgs.wineWow64Packages.stable; };
   pwndbg = callPackage ./pwndbg.nix { };
+  bytecaster = callPackage ./bytecaster.nix { };
 
   ## --- GNU Radio OOT modules (source builds) + bundled gnuradio ----------
   # GR4 is the experimental, separately installable add-on used by the
@@ -371,6 +372,11 @@ RULES
   # stock bladeRF module is swapped out only in that environment.
   soapybladerf-srsran = callPackage ./soapybladerf-srsran.nix { };
   srsran-project-bladerf = callPackage ./srsran-project-bladerf.nix { };
+  # Passive LTE sniffer (telecom_ltesniffer image), on its own srsRAN 4G fork.
+  ltesniffer = callPackage ./ltesniffer.nix { };
+  # OpenAirInterface 5G gNB/nrUE (telecom_5G_oai image), with the asn1c fork
+  # and SIMDE commit OAI pins.
+  openairinterface5g = callPackage ./openairinterface5g.nix { };
   soapysdr-with-plugins-bladerf-srsran = pkgs.soapysdr.override {
     extraPackages = builtins.filter (p: lib.meta.availableOn stdenv.hostPlatform p) ([
       limesuite soapyairspy soapyaudio soapyhackrf
@@ -414,17 +420,32 @@ RULES
   milazycracker = callPackage ./milazycracker.nix { inherit crypto1-bs; };
   rfidler = callPackage ./rfidler.nix { inherit mphidflash; };
   nfc-laboratory = callPackage ./nfc-laboratory.nix { inherit libhydrasdr; };
+  # Flipper Zero app build tool (qFlipper itself comes from nixpkgs).
+  ufbt = callPackage ./ufbt.nix { };
 
   ## --- Automotive / CAN (source) ---------------------------------------
   caringcaribou = callPackage ./sec/caringcaribou.nix { };
   v2ginjector = callPackage ./sec/v2ginjector.nix { };
   cantact = callPackage ./cantact.nix { };
+  icsim = callPackage ./icsim.nix { };
+  # DoIP client library, listed as python3Packages.doipclient like pycrate.
+  "python3Packages.doipclient" = pkgs.python3Packages.callPackage ./doipclient.nix { };
 
   ## --- Android / network (source Python) -------------------------------
   drozer = callPackage ./sec/drozer.nix { jdk = pkgs.jdk; };
   smali = callPackage ./smali.nix { };
   autorecon = callPackage ./sec/autorecon.nix { };
   mobsf = callPackage ./mobsf { };
+  reflutter = callPackage ./sec/reflutter.nix { };
+
+  ## --- Active Directory (source Python) --------------------------------
+  targetedkerberoast = callPackage ./sec/targetedkerberoast.nix { };
+
+  ## --- Hardware: RF Swift's serial baud-rate finder, ChipWhisperer -------
+  baudrate = callPackage ./baudrate.nix { };
+  # nixpkgs' 5.7.0 is marked broken (NumPy 1.26 pin); this is upstream's NumPy 2
+  # line. Listed as python3Packages.chipwhisperer, so it shadows the broken one.
+  "python3Packages.chipwhisperer" = pkgs.python3Packages.callPackage ./chipwhisperer.nix { };
 
   ## --- Wi-Fi rogue-AP / WPA3 (source Python) ---------------------------
   macstealer = callPackage ./sec/macstealer.nix { };
@@ -444,10 +465,18 @@ RULES
   wacker = callPackage ./sec/wacker.nix { };
   wifipumpkin3 = callPackage ./sec/wifipumpkin3.nix { };
   sparrow-wifi = callPackage ./sec/sparrow-wifi.nix { };
+  # WPA-Enterprise tooling (wifi_basic image).
+  hostapd-wpe = callPackage ./sec/hostapd-wpe.nix { };
+  wpa-sycophant = callPackage ./sec/wpa-sycophant.nix { };
+  eap-buster = callPackage ./sec/eap-buster.nix { };
 
   ## --- OSINT / recon extra (source Python) -----------------------------
   toutatis = callPackage ./sec/toutatis.nix { };
   finalrecon = callPackage ./sec/finalrecon.nix { };
+  # Dropped by nixpkgs; upstream release binaries, as the image installs.
+  phoneinfoga = callPackage ./sec/phoneinfoga.nix { };
+  # Shadows nixpkgs' `blackbird`, an unrelated (removed) GTK theme.
+  blackbird = callPackage ./sec/blackbird.nix { };
   sniffle = callPackage ./sec/sniffle.nix { };
 
   ## --- More security tools (source) ------------------------------------
@@ -462,6 +491,9 @@ RULES
   sslyze = callPackage ./sec/sslyze.nix { };
   sippts = callPackage ./sec/sippts.nix { };
   hetty = callPackage ./hetty.nix { };
+  # nixpkgs' recipe at the release the images install (it pins its version in
+  # a `let`, so an override cannot move it).
+  burpsuite = callPackage ./burpsuite.nix { };
 
   ## --- OSINT / recon (source Python) -----------------------------------
   sublist3r = callPackage ./sublist3r.nix { };
@@ -477,6 +509,7 @@ RULES
   whisperpair = callPackage ./sec/whisperpair.nix { };
   breaktooth = callPackage ./sec/breaktooth.nix { };
   blerp = callPackage ./sec/blerp.nix { };
+  sweyntooth = callPackage ./sec/sweyntooth.nix { };
 
   ## --- Network image tools not in nixpkgs (source builds) --------------------
   nmapautomator = callPackage ./sec/nmapautomator.nix { };

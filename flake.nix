@@ -16,10 +16,9 @@
       # The environment catalog (pure data): { <image> = { description; packages = [str]; ... }; }
       rawEnvironments = import ./environments.nix;
 
-      # Baseline developer tools available in every RF Swift environment.
-      # Keep these centralized so new environments inherit them automatically.
-      # Keep synchronized with gen-catalog.nix so CLI/GUI metadata matches.
-      commonPackages = [ "python3" "uv" "go" ];
+      # Baseline tools available in every RF Swift environment, shared with
+      # gen-catalog.nix so the catalog lists exactly what each environment ships.
+      commonPackages = import ./common-packages.nix;
       environments = nixpkgs.lib.mapAttrs (_: env: env // {
         packages = nixpkgs.lib.unique (commonPackages ++ env.packages);
       }) rawEnvironments;

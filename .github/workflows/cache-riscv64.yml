@@ -13,14 +13,15 @@
 # Fork pull requests have no secrets: they build without the cache, never push.
 #
 # riscv64 is built under QEMU user-mode emulation, which is slow, so this
-# workflow only runs for main, tags and manual dispatch (not every branch).
+# workflow only runs for main, the v*-dev development branches, tags and
+# manual dispatch (not every branch).
 name: Cache riscv64
 on:
   push:
-    branches: [main]
+    branches: [main, 'v*-dev']
     tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, 'v*-dev']
   workflow_dispatch:
 permissions:
   contents: read

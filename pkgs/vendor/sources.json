@@ -1,8 +1,8 @@
 {
   "signalhound-sdk": {
-    "version": "08_26_26",
-    "url": "https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_08_26_26.zip",
-    "hash": "sha256-G+ZwFjaXlNSzBJjNodunPeDrXKFocBq56LaoyfEeROY=",
+    "version": "09_14_26",
+    "url": "https://signalhound.com/sigdownloads/SDK/signal_hound_sdk_09_14_26.zip",
+    "hash": "sha256-rxXCsvUxlmUwVr97ajqTJ5TFuR5GkjzP6wBcZdzuLpM=",
     "homepage": "https://signalhound.com/software/signal-hound-software-development-kit-sdk/",
     "versionProbe": {
       "type": "regex",
@@ -18,35 +18,35 @@
     }
   },
   "signalhound-spike": {
-    "version": "4_0_16",
-    "url": "https://signalhound.com/sigdownloads/Spike/Spike(Ubuntu22.04x64)_4_0_16.zip",
-    "hash": "sha256-+Wx39z+W/pFdF0i2rpnKeoXNxWOPZNP6OVEeNdJK61k=",
+    "version": "4_0_17",
+    "url": "https://signalhound.com/sigdownloads/Spike/Spike(Ubuntu_x64)_4_0_17.zip",
+    "hash": "sha256-+D49HJUec1kMSo0JTtc/+VLpg6E4lXgNP27vSe1kgzY=",
     "homepage": "https://signalhound.com/spike/",
     "versionProbe": {
       "type": "regex",
       "url": "https://signalhound.com/spike/",
-      "pattern": "Spike\\(Ubuntu22\\.04x64\\)_[0-9_]+\\.zip",
-      "prefix": "Spike(Ubuntu22.04x64)_",
+      "pattern": "Spike\\(Ubuntu_x64\\)_[0-9_]+\\.zip",
+      "prefix": "Spike(Ubuntu_x64)_",
       "suffix": ".zip"
     },
     "platformPaths": {
-      "x86_64-linux": "Spike(Ubuntu22.04x64)_4_0_16"
+      "x86_64-linux": "Spike(Ubuntu_x64)_4_0_17"
     }
   },
   "signalhound-vsg60": {
-    "version": "2_0_3",
-    "url": "https://signalhound.com/sigdownloads/VSG60/VSG(Ubuntu22.04x64)_2_0_3.zip",
-    "hash": "sha256-0KeME74HOwTuGxUoK3voSqM71lKKSYhain0S+Mz1OWE=",
+    "version": "2_0_5",
+    "url": "https://signalhound.com/sigdownloads/VSG60/VSG(Ubuntu_x64)_2_0_5.zip",
+    "hash": "sha256-9ob9JvzUkA8hC3u/5jzsEW1kLc39YYZHhpLGiCUBDjY=",
     "homepage": "https://signalhound.com/products/vsg60a/",
     "versionProbe": {
       "type": "regex",
-      "url": "https://signalhound.com/support/product-downloads/vsg60a-downloads/",
-      "pattern": "VSG\\(Ubuntu22\\.04x64\\)_[0-9_]+\\.zip",
-      "prefix": "VSG(Ubuntu22.04x64)_",
+      "url": "https://signalhound.com/software/vsg-software/",
+      "pattern": "VSG\\(Ubuntu_x64\\)_[0-9_]+\\.zip",
+      "prefix": "VSG(Ubuntu_x64)_",
       "suffix": ".zip"
     },
     "platformPaths": {
-      "x86_64-linux": "VSG(Ubuntu22.04x64)_2_0_3"
+      "x86_64-linux": "VSG(Ubuntu_x64)_2_0_5"
     }
   },
   "sastudio": {
