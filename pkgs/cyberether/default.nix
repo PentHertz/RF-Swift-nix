@@ -155,19 +155,15 @@ let
     (fn: h: "cp ${fetchurl { url = "https://cdn.cyberether.org/geodata/${fn}"; hash = h; }} $out/${fn}\n")
     geodataFiles));
 
-  # CyberEther requires meson >= 1.11.0; nixpkgs ships 1.10.2. Bump the source
-  # and skip meson's own (very long) project test suite.
-  mesonNew = meson.overrideAttrs (_: {
-    version = "1.11.0";
-    src = fetchFromGitHub {
-      owner = "mesonbuild";
-      repo = "meson";
-      rev = "1.11.0";
-      hash = "sha256-y2EC4uEtocMP0lWq7aegnPV+xzDG69+UBxKTSfGXf7w=";
-    };
-    doCheck = false;
-    doInstallCheck = false;
-  });
+  # CyberEther requires meson >= 1.11.0. nixpkgs' meson is used as is: it used
+  # to be overridden to 1.11.0 when the pin shipped 1.10.2, but swapping only
+  # the source kept nixpkgs' patches, which stop applying as soon as nixpkgs
+  # rebases them onto a newer meson (1.12). Fail evaluation clearly instead if
+  # the pin ever goes back below the requirement.
+  mesonForBuild =
+    assert lib.assertMsg (lib.versionAtLeast meson.version "1.11.0")
+      "cyberether: needs meson >= 1.11.0, this nixpkgs has ${meson.version}";
+    meson;
 
   # Python with the modules the geodata triangulation step imports at build time.
   pythonForBuild = python3.withPackages (ps: [ ps.numpy ps.mapbox-earcut ]);
@@ -185,7 +181,7 @@ stdenv.mkDerivation {
   };
 
   nativeBuildInputs = [
-    mesonNew ninja pkg-config git pythonForBuild glslang spirv-cross
+    mesonForBuild ninja pkg-config git pythonForBuild glslang spirv-cross
     wayland-scanner
   ];
   buildInputs = [

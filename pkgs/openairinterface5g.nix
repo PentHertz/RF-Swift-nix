@@ -36,6 +36,12 @@ let
 
     nativeBuildInputs = [ autoreconfHook bison flex perl ];
 
+    # `make all` runs examples/crfc2asn1.pl, whose `#!/usr/bin/env perl` does
+    # not resolve inside the Nix build sandbox (as in nixpkgs' asn1c).
+    postPatch = ''
+      patchShebangs examples/crfc2asn1.pl
+    '';
+
     env.CFLAGS = "-O2 -fno-strict-aliasing";
 
     enableParallelBuilding = true;
