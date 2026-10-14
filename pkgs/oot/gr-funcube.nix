@@ -39,6 +39,16 @@ gnuradioPackages.mkDerivation {
       "-DLIBUSB_LIBRARIES=${lib.getLib libusb1}/lib/libusb-1.0${stdenv.hostPlatform.extensions.sharedLibrary}"
     ];
 
+  # funcube_fcd_control.block.yml was copied from the FCD source block: its
+  # make/callbacks templates still call set_freq_corr(${ppm}), but the control
+  # block declares no `ppm` parameter and its C++ class (fcd_control.h) has no
+  # set_freq_corr. GRC then cannot generate any flowgraph holding the block
+  # (TemplateError: 'ppm' is not defined). Drop those template lines.
+  postPatch = ''
+    grep -q set_freq_corr grc/funcube_fcd_control.block.yml
+    sed -i -e '/% if ppm/,/% endif/d' -e '/set_freq_corr/d' grc/funcube_fcd_control.block.yml
+  '';
+
   # postInstall runs in the CMake build dir; the rules file is in the source root.
   postInstall = ''
     install -Dm644 ../50-funcube.rules $out/lib/udev/rules.d/50-funcube.rules

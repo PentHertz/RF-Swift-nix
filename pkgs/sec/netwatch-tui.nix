@@ -22,6 +22,6 @@ rustPlatform.buildRustPackage rec {
     homepage = "https://crates.io/crates/netwatch-tui";
     license = lib.licenses.mit;
     platforms = lib.platforms.unix;
-    mainProgram = "netwatch-tui";
+    mainProgram = "netwatch";
   };
 }

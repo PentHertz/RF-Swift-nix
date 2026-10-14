@@ -32,18 +32,28 @@ stdenv.mkDerivation {
   buildInputs = [ qt5.qtbase ]
     ++ lib.optionals stdenv.hostPlatform.isLinux [ libusb1 ];
 
+  # On Darwin qmake builds a `Qthid.app` bundle (TARGET = Qthid in qthid.pro).
+  # The hook's automatic pass walks bin/ and Applications/ while it renames the
+  # binaries it wraps, so a bin/ link into the bundle got wrapped twice and the
+  # pass crashed nondeterministically (segfault 139 under load). Wrap the bundle
+  # binary once, explicitly, then link it into bin/.
+  dontWrapQtApps = stdenv.hostPlatform.isDarwin;
+
   installPhase = ''
     runHook preInstall
     mkdir -p $out/bin
-    if [ -d qthid.app ]; then
-      # qmake produces an app bundle on Darwin; keep it and expose the binary.
-      mkdir -p $out/Applications
-      cp -r qthid.app $out/Applications/
-      ln -s ../Applications/qthid.app/Contents/MacOS/qthid $out/bin/qthid
-    else
-      install -Dm755 qthid $out/bin/qthid
-    fi
+  '' + (if stdenv.hostPlatform.isDarwin then ''
+    mkdir -p $out/Applications
+    cp -r Qthid.app $out/Applications/
+  '' else ''
+    install -Dm755 qthid $out/bin/qthid
+  '') + ''
     runHook postInstall
+  '';
+
+  postFixup = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    wrapQtApp $out/Applications/Qthid.app/Contents/MacOS/Qthid
+    ln -s ../Applications/Qthid.app/Contents/MacOS/Qthid $out/bin/qthid
   '';
 
   meta = {

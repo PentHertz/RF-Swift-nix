@@ -14,6 +14,9 @@ gnuradioPackages.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat python3Packages.numpy ];
+  # Python modules its blocks import at run time: propagated so a GNU Radio
+  # wrapper bundling the module adds them to its Python environment.
+  propagatedBuildInputs = [ python3Packages.bitstring ];
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
   env.NIX_CFLAGS_COMPILE = "-Wno-error -Wno-deprecated-declarations -Wno-narrowing -fpermissive";
 

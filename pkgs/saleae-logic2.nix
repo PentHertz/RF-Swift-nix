@@ -5,7 +5,7 @@
 #   * aarch64-darwin: the official macOS arm64 zip, which ships a signed
 #     "Saleae Logic.app" Electron bundle; install it under $out/Applications and
 #     expose its executable on $PATH.
-{ lib, stdenvNoCC, appimageTools, fetchurl, unzip }:
+{ lib, stdenvNoCC, appimageTools, fetchurl, unzip, makeWrapper }:
 
 let
   pname = "saleae-logic2";
@@ -45,7 +45,7 @@ RULES
       url = "https://downloads2.saleae.com/logic2/Logic-${version}-macos-arm64.zip";
       hash = "sha256-lC0aSPHTdzRfvAaowA6JLkqMWWWcYupCqUFHHqO32Us=";
     };
-    nativeBuildInputs = [ unzip ];
+    nativeBuildInputs = [ unzip makeWrapper ];
     # The zip's top-level entry is the .app itself, so unpack into a dir.
     sourceRoot = ".";
     installPhase = ''
@@ -53,10 +53,13 @@ RULES
       mkdir -p "$out/Applications"
       cp -R "Saleae Logic.app" "$out/Applications/"
       # Expose the bundle's executable on PATH under both names. Electron resolves
-      # its resources from the real path of the binary (inside the .app), so a
-      # symlink into the bundle launches correctly.
+      # its resources from the real path of the binary (inside the .app), which
+      # the wrapper execs. Inside an `rfswift --isolate` jail (RFSWIFT_ISOLATED=1)
+      # Chromium cannot start its own sandbox - macOS refuses a sandbox nested in
+      # the jail's - so pass --no-sandbox there only; the jail confines it.
       mkdir -p "$out/bin"
-      ln -s "$out/Applications/Saleae Logic.app/Contents/MacOS/Logic" "$out/bin/${pname}"
+      makeWrapper "$out/Applications/Saleae Logic.app/Contents/MacOS/Logic" "$out/bin/${pname}" \
+        --add-flags "\''${RFSWIFT_ISOLATED:+--no-sandbox}"
       ln -s "$out/bin/${pname}" "$out/bin/logic2"
       runHook postInstall
     '';

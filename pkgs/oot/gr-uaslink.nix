@@ -14,6 +14,17 @@ gnuradioPackages.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat python3Packages.numpy ];
+  # Python modules its blocks import at run time: propagated so a GNU Radio
+  # wrapper bundling the module adds them to its Python environment.
+  # (Its grc/*.yml are still in GNU Radio 3.7's format, which GRC 3.10 does
+  # not load: the blocks are usable from Python, not from gnuradio-companion.)
+  propagatedBuildInputs = [ python3Packages.pymavlink ];
+  # The Python install list omits three modules __init__.py imports, so
+  # `import gnuradio.uaslink` fails.
+  postPatch = ''
+    substituteInPlace python/uaslink/CMakeLists.txt --replace-fail "burst_verification.py " \
+      "burst_verification.py pdu_to_binary_vector.py message_debug_hex.py binary_vector_to_pdu.py "
+  '';
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
   env.NIX_CFLAGS_COMPILE = "-Wno-error -Wno-deprecated-declarations -Wno-narrowing -fpermissive";
 

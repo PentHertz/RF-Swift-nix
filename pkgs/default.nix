@@ -16,6 +16,70 @@ let
   # Proprietary vendor SDKs (SignalHound, Harogic). Computed up front so urh-ng
   # can build its device backends against them.
   vendor = import ./vendor { inherit pkgs; };
+
+  # Most GNU Radio OOT modules declare Linux only (the platform the images
+  # build them on), yet build on Darwin too. There GNU Radio's block.h includes
+  # <mpirxx.h> instead of <gmpxx.h>, so a module needs mpir in place of gmp.
+  # darwinOot applies that and allows Darwin; Linux derivations are unchanged.
+  # Modules left without it need something Darwin lacks (libosmocore, vendor
+  # SDKs, linux/if_tun.h).
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
+  allowDarwin = o: { meta = (o.meta or { }) // { platforms = pkgs.lib.platforms.unix; }; };
+  darwinOot = p:
+    if !isDarwin then p
+    else p.overrideAttrs (o: allowDarwin o // {
+      buildInputs = builtins.filter (x: (x.pname or "") != "gmp") (o.buildInputs or [ ]) ++ [ pkgs.mpir ];
+      propagatedBuildInputs =
+        map (x: if (x.pname or "") == "gmp" then pkgs.mpir else x) (o.propagatedBuildInputs or [ ]);
+    });
+  # darwinOot plus a module-specific Darwin fix (overrideAttrs function).
+  darwinOotWith = fix: p: if !isDarwin then p else (darwinOot p).overrideAttrs fix;
+  appendCFlags = flags: o: {
+    env = (o.env or { }) // { NIX_CFLAGS_COMPILE = toString (o.env.NIX_CFLAGS_COMPILE or "") + " " + flags; };
+  };
+  # The pdu/timing/fhss utils modules (Sandia) hand boost::format objects to
+  # GR_LOG_* (fmt), through GNU Radio's fmt::formatter<boost::format>, whose
+  # format() is not const; fmt 12 calls it on a const formatter, which clang
+  # rejects (GCC accepts). Pass the formatted strings instead.
+  boostFormatLogsToStrings = o: {
+    nativeBuildInputs = (o.nativeBuildInputs or [ ]) ++ [ pkgs.perl ];
+    postPatch = (o.postPatch or "") + ''
+      perl -0pi -e 's/(GR_LOG_[A-Z]+\(\s*[\w>.-]+\s*,\s*)(boost::format\(.*?)\);/$1($2).str());/sg' \
+        $(grep -rl 'boost::format' lib)
+    '';
+  };
+  # Every OOT module ships its example flowgraphs (examples/) and helper
+  # scripts (apps/) under GNU Radio's own location for them,
+  # share/gnuradio/examples/<module>. The gnuradio-rfswift bundles link them
+  # next to GNU Radio's own, so they land in the environment's profile, and
+  # point GRC's example browser there. A module whose CMake already installs its
+  # examples there keeps that directory; apps/, which CMake never installs, is
+  # added to it.
+  withExamples = p: p.overrideAttrs (o: {
+    postInstall = (o.postInstall or "") + ''
+      srcRoot=$NIX_BUILD_TOP/$sourceRoot
+      exRoot=$out/share/gnuradio/examples
+      # A glob, not find | head: under stdenv's pipefail, find fails on a
+      # missing directory and can take a SIGPIPE from head.
+      existing=
+      for d in "$exRoot"/*/; do
+        if [ -d "$d" ]; then existing=''${d%/}; break; fi
+      done
+      dest=''${existing:-$exRoot/${pkgs.lib.removePrefix "gr-" (o.pname or "module")}}
+      if [ -z "$existing" ] && [ -d "$srcRoot/examples" ]; then
+        mkdir -p "$dest" && cp -r "$srcRoot/examples/." "$dest/"
+      fi
+      if [ -d "$srcRoot/apps" ]; then
+        mkdir -p "$dest/apps" && cp -r "$srcRoot/apps/." "$dest/apps/"
+      fi
+      if [ -d "$dest" ]; then find "$dest" -name CMakeLists.txt -delete; fi
+    '';
+  });
+  # Build steps shared by RF Swift's GNU Radio wrappers (kept here, out of the
+  # exported package set).
+  gnuradioBundle = import ./lib/gnuradio-bundle.nix { inherit (pkgs) lib; };
+  # Plain C/C++ libraries some of those modules need, declared Linux-only too.
+  darwinLib = p: if !isDarwin then p else p.overrideAttrs allowDarwin;
 in
 with pkgs;
 
@@ -111,10 +175,11 @@ RULES
   ## --- Reverse engineering (latest upstream release) --------------------
   ghidra-latest = callPackage ./ghidra-latest.nix { };
   # Keep the catalog's familiar `ghidra` name while overriding nixpkgs with
-  # RF Swift's pinned latest official release.
-  ghidra = ghidra-latest;
+  # RF Swift's pinned latest official release. That release package is
+  # Linux-only (autoPatchelf of the bundled native helpers), so on Darwin keep
+  # nixpkgs' source-built Ghidra rather than drop Ghidra from the environment.
+  ghidra = if pkgs.stdenv.hostPlatform.isLinux then ghidra-latest else pkgs.ghidra;
   joern = callPackage ./joern.nix { };
-  unblob = callPackage ./unblob.nix { };
   angr = callPackage ./angr.nix { };
   # Use upstream's preferred WoW64 package. Unlike the deprecated
   # wineWowPackages variant this is served by cache.nixos.org for our pin,
@@ -128,82 +193,121 @@ RULES
   # GR4 is the experimental, separately installable add-on used by the
   # sdr_gnuradio4 image. GNU Radio 3.10 remains the default for every profile.
   gnuradio4 = callPackage ./gnuradio4.nix { };
-  gr-rds = callPackage ./oot/gr-rds.nix { };
-  gr-iridium = callPackage ./oot/gr-iridium.nix { };
-  gr-satellites = callPackage ./oot/gr-satellites.nix { };
-  gr-gsm = callPackage ./oot/gr-gsm.nix { inherit gr-osmosdr-penthertz; };
-  gr-ais = callPackage ./oot/gr-ais.nix { };
-  gr-limesdr = callPackage ./oot/gr-limesdr.nix { };
-  gr-tempest = callPackage ./oot/gr-tempest.nix { };
-  gr-dab = callPackage ./oot/gr-dab.nix { };
+  gr-rds = darwinOot (withExamples (callPackage ./oot/gr-rds.nix { }));
+  gr-iridium = darwinOot (withExamples (callPackage ./oot/gr-iridium.nix { }));
+  gr-satellites = darwinOot (withExamples (callPackage ./oot/gr-satellites.nix { }));
+  gr-gsm = withExamples (callPackage ./oot/gr-gsm.nix { inherit gr-osmosdr-penthertz; });
+  gr-ais = darwinOot (withExamples (callPackage ./oot/gr-ais.nix { }));
+  gr-limesdr = darwinOot (withExamples (callPackage ./oot/gr-limesdr.nix { }));
+  gr-tempest = darwinOot (withExamples (callPackage ./oot/gr-tempest.nix { }));
+  # C++17 forbids `register` (mp2_decode_bs_impl.cc); clang enforces it, GCC warns.
+  gr-dab = darwinOotWith (appendCFlags "-Wno-register") (withExamples (callPackage ./oot/gr-dab.nix { }));
   tetra-kit = callPackage ./tetra-kit.nix { };
   op25 = callPackage ./op25.nix { inherit gr-osmosdr-penthertz; };
   ice9-bluetooth-sniffer = callPackage ./ice9-bluetooth-sniffer.nix { };
   # More OOT modules (the set RF Swift ships), all GNU Radio 3.10.
-  gr-foo = callPackage ./oot/gr-foo.nix { };
-  gr-adsb = callPackage ./oot/gr-adsb.nix { };
-  gr-paint = callPackage ./oot/gr-paint.nix { };
-  gr-dect2 = callPackage ./oot/gr-dect2.nix { };
-  gr-nfc = callPackage ./oot/gr-nfc.nix { };
-  gr-air-modes = callPackage ./oot/gr-air-modes.nix { };
-  gr-ieee802-11 = callPackage ./oot/gr-ieee802-11.nix { inherit gr-foo; };
-  gr-ieee802-15-4 = callPackage ./oot/gr-ieee802-15-4.nix { inherit gr-foo; };
+  gr-foo = darwinOot (withExamples (callPackage ./oot/gr-foo.nix { }));
+  gr-adsb = darwinOot (withExamples (callPackage ./oot/gr-adsb.nix { }));
+  gr-paint = darwinOot (withExamples (callPackage ./oot/gr-paint.nix { }));
+  gr-dect2 = darwinOot (withExamples (callPackage ./oot/gr-dect2.nix { }));
+  gr-nfc = darwinOot (withExamples (callPackage ./oot/gr-nfc.nix { }));
+  gr-air-modes = darwinOot (withExamples (callPackage ./oot/gr-air-modes.nix { }));
+  gr-ieee802-11 = darwinOot (withExamples (callPackage ./oot/gr-ieee802-11.nix { inherit gr-foo; }));
+  gr-ieee802-15-4 = darwinOot (withExamples (callPackage ./oot/gr-ieee802-15-4.nix { inherit gr-foo; }));
 
   # The remaining OOT modules RF Swift ships by default (see RF-Swift-images
   # scripts/gr_oot_modules.sh). All GNU Radio 3.10; pinned rev+hash. A few carry
   # source deps not in nixpkgs (itpp, turbofec, libspectranstream) and are wired
   # against locally-packaged deps below or left as documented gaps.
-  gr-lora = callPackage ./oot/gr-lora.nix { };
-  gr-inspector = callPackage ./oot/gr-inspector.nix { };
-  gr-uaslink = callPackage ./oot/gr-uaslink.nix { };
-  gr-X10 = callPackage ./oot/gr-X10.nix { };
-  gr-gfdm = callPackage ./oot/gr-gfdm.nix { };
-  gr-aaronia_rtsa = callPackage ./oot/gr-aaronia_rtsa.nix { inherit libspectranstream; };
-  gr-aistx = callPackage ./oot/gr-aistx.nix { };
-  gr-dvbs2 = callPackage ./oot/gr-dvbs2.nix { };
-  gr-ieee802-11ah = callPackage ./oot/gr-ieee802-11ah.nix { inherit gr-foo; };
-  gr-ieee80211 = callPackage ./oot/gr-ieee80211.nix { };
-  gr-droneid = callPackage ./oot/gr-droneid.nix { inherit turbofec crcpp; };
-  gr-keyfob = callPackage ./oot/gr-keyfob.nix { };
-  gr-radar = callPackage ./oot/gr-radar.nix { };
-  gr-nordic = callPackage ./oot/gr-nordic.nix { };
-  gr-pdu_utils = callPackage ./oot/gr-pdu_utils.nix { };
-  gr-timing_utils = callPackage ./oot/gr-timing_utils.nix { inherit gr-pdu_utils gr-sandia_utils; };
-  gr-sandia_utils = callPackage ./oot/gr-sandia_utils.nix { inherit gr-pdu_utils; };
-  gr-fhss_utils = callPackage ./oot/gr-fhss_utils.nix { inherit gr-pdu_utils gr-timing_utils; };
-  gr-zwave_poore = callPackage ./oot/gr-zwave_poore.nix { };
-  gr-mixalot = callPackage ./oot/gr-mixalot.nix { inherit itpp; };
-  gr-reveng = callPackage ./oot/gr-reveng.nix { };
-  gr-DCF77_Receiver = callPackage ./oot/gr-DCF77_Receiver.nix { };
-  gr-j2497 = callPackage ./oot/gr-j2497.nix { };
-  gr-m17 = callPackage ./oot/gr-m17.nix { };
-  gr-grnet = callPackage ./oot/gr-grnet.nix { };
-  gr-aoa = callPackage ./oot/gr-aoa.nix { };
-  gr-correctiq = callPackage ./oot/gr-correctiq.nix { };
-  gr-dsd = callPackage ./oot/gr-dsd.nix { inherit itpp; };
-  gr-nrsc5 = callPackage ./oot/gr-nrsc5.nix { fdk_aac = fdk-aac-hdc; };
-  gr-ntsc-rc = callPackage ./oot/gr-ntsc-rc.nix { };
-  gr-mer = callPackage ./oot/gr-mer.nix { };
-  gr-flarm = callPackage ./oot/gr-flarm.nix { inherit turbofec; };
-  gr-guiextra = callPackage ./oot/gr-guiextra.nix { };
-  gr-rftap = callPackage ./oot/gr-rftap.nix { };
-  gr-radio_astro = callPackage ./oot/gr-radio_astro.nix { };
-  gr-cessb = callPackage ./oot/gr-cessb.nix { };
-  gr-hydrasdr = callPackage ./oot/gr-hydrasdr.nix { inherit libhydrasdr; };
-  gr-bladeRF = callPackage ./oot/gr-bladeRF.nix { inherit gr-osmosdr-penthertz; };
+  gr-lora = darwinOot (withExamples (callPackage ./oot/gr-lora.nix { }));
+  gr-inspector = darwinOot (withExamples (callPackage ./oot/gr-inspector.nix { }));
+  gr-uaslink = darwinOot (withExamples (callPackage ./oot/gr-uaslink.nix { }));
+  gr-X10 = darwinOot (withExamples (callPackage ./oot/gr-X10.nix { }));
+  scikit-commpy = callPackage ./scikit-commpy.nix { };
+  gr-gfdm = darwinOot (withExamples (callPackage ./oot/gr-gfdm.nix { inherit scikit-commpy; }));
+  gr-aaronia_rtsa = withExamples (callPackage ./oot/gr-aaronia_rtsa.nix { inherit libspectranstream; });
+  gr-aistx = darwinOot (withExamples (callPackage ./oot/gr-aistx.nix { }));
+  gr-dvbs2 = withExamples (callPackage ./oot/gr-dvbs2.nix { });
+  gr-ieee802-11ah = darwinOot (withExamples (callPackage ./oot/gr-ieee802-11ah.nix { inherit gr-foo; }));
+  # Its timestamps are declared std::chrono::_V2::system_clock::time_point,
+  # libstdc++'s internal spelling of the high_resolution_clock they are
+  # assigned from. libc++ has no _V2, and its high_resolution_clock is the
+  # steady clock: declare them as what is assigned.
+  gr-ieee80211 = darwinOotWith (o: {
+    postPatch = (o.postPatch or "") + ''
+      substituteInPlace lib/trigger_impl.h \
+        --replace-fail std::chrono::_V2::system_clock std::chrono::high_resolution_clock
+    '';
+  }) (withExamples (callPackage ./oot/gr-ieee80211.nix { }));
+  # M_PIf64 is a glibc-only <math.h> constant, and std::min gets uint64_t
+  # against size_t, one type on Linux but two (unsigned long long / long) here.
+  gr-droneid = darwinOotWith (o: appendCFlags "-DM_PIf64=M_PI" o // {
+    postPatch = (o.postPatch or "") + ''
+      substituteInPlace lib/normalized_xcorr_estimate_impl.cc \
+        --replace-fail "std::min(static_cast<uint64_t>(noutput_items)" "std::min(static_cast<size_t>(noutput_items)"
+    '';
+  }) (withExamples (callPackage ./oot/gr-droneid.nix { inherit turbofec crcpp; }));
+  gr-keyfob = darwinOot (withExamples (callPackage ./oot/gr-keyfob.nix { }));
+  gr-radar = darwinOot (withExamples (callPackage ./oot/gr-radar.nix { }));
+  gr-nordic = darwinOot (withExamples (callPackage ./oot/gr-nordic.nix { }));
+  gr-pdu_utils = darwinOotWith boostFormatLogsToStrings (withExamples (callPackage ./oot/gr-pdu_utils.nix { }));
+  gr-timing_utils = darwinOotWith boostFormatLogsToStrings
+    (withExamples (callPackage ./oot/gr-timing_utils.nix { inherit gr-pdu_utils gr-sandia_utils; }));
+  # Its <endian.h> include is Linux-only and unused (the be32toh call is
+  # commented out), and std::min/max mix uint64_t with size_t or 0lu (see
+  # gr-droneid).
+  gr-sandia_utils = darwinOotWith (o: {
+    postPatch = (o.postPatch or "") + ''
+      substituteInPlace lib/vita49_tcp_msg_source_impl.cc --replace-fail "#include <endian.h>" ""
+      substituteInPlace lib/block_buffer_impl.cc \
+        --replace-fail "std::min((size_t)" "std::min<size_t>((size_t)" \
+        --replace-fail "0lu)" "uint64_t(0))"
+    '';
+  }) (withExamples (callPackage ./oot/gr-sandia_utils.nix { inherit gr-pdu_utils; }));
+  # Also uses OpenMP, which Apple's clang only gets from a separate runtime.
+  gr-fhss_utils = darwinOotWith (o: boostFormatLogsToStrings o // {
+    buildInputs = (o.buildInputs or [ ]) ++ [ llvmPackages.openmp ];
+  }) (withExamples (callPackage ./oot/gr-fhss_utils.nix { inherit gr-pdu_utils gr-timing_utils; }));
+  gr-zwave_poore = darwinOot (withExamples (callPackage ./oot/gr-zwave_poore.nix { }));
+  # C++17 forbids `register` (golay.cc); clang enforces it, GCC warns.
+  gr-mixalot = darwinOotWith (appendCFlags "-Wno-register") (withExamples (callPackage ./oot/gr-mixalot.nix { inherit itpp; }));
+  gr-reveng = darwinOot (withExamples (callPackage ./oot/gr-reveng.nix { }));
+  gr-DCF77_Receiver = withExamples (callPackage ./oot/gr-DCF77_Receiver.nix { });
+  gr-j2497 = darwinOot (withExamples (callPackage ./oot/gr-j2497.nix { }));
+  gr-m17 = darwinOot (withExamples (callPackage ./oot/gr-m17.nix { }));
+  gr-grnet = darwinOot (withExamples (callPackage ./oot/gr-grnet.nix { }));
+  gr-aoa = darwinOot (withExamples (callPackage ./oot/gr-aoa.nix { }));
+  gr-correctiq = darwinOot (withExamples (callPackage ./oot/gr-correctiq.nix { }));
+  # The recipe names libsndfile.so; Darwin's shared libraries end in .dylib.
+  gr-dsd = darwinOotWith (o: {
+    cmakeFlags = map (builtins.replaceStrings [ "libsndfile.so" ] [ "libsndfile.dylib" ]) (o.cmakeFlags or [ ]);
+  }) (withExamples (callPackage ./oot/gr-dsd.nix { inherit itpp; }));
+  # The recipe names libfdk-aac.so; Darwin's shared libraries end in .dylib.
+  gr-nrsc5 = darwinOotWith (o: {
+    cmakeFlags = map (builtins.replaceStrings [ "libfdk-aac.so" ] [ "libfdk-aac.dylib" ]) (o.cmakeFlags or [ ]);
+  }) (withExamples (callPackage ./oot/gr-nrsc5.nix { fdk_aac = fdk-aac-hdc; }));
+  gr-ntsc-rc = darwinOot (withExamples (callPackage ./oot/gr-ntsc-rc.nix { }));
+  gr-mer = darwinOot (withExamples (callPackage ./oot/gr-mer.nix { }));
+  gr-flarm = darwinOot (withExamples (callPackage ./oot/gr-flarm.nix { inherit turbofec; }));
+  gr-guiextra = darwinOot (withExamples (callPackage ./oot/gr-guiextra.nix { }));
+  gr-rftap = darwinOot (withExamples (callPackage ./oot/gr-rftap.nix { }));
+  gr-radio_astro = darwinOot (withExamples (callPackage ./oot/gr-radio_astro.nix { }));
+  gr-cessb = darwinOot (withExamples (callPackage ./oot/gr-cessb.nix { }));
+  gr-hydrasdr = withExamples (callPackage ./oot/gr-hydrasdr.nix { inherit libhydrasdr; });
+  gr-bladeRF = withExamples (callPackage ./oot/gr-bladeRF.nix { inherit gr-osmosdr-penthertz; });
   # Dedicated vendor-hardware OOT source blocks (Harogic, Signal Hound), linking
   # the proprietary SDKs already packaged under vendor/. Each is platform-gated
   # in its own file so the gnuradio-rfswift bundle drops it where the SDK does
   # not exist rather than failing to evaluate.
-  gr-htra = callPackage ./oot/gr-htra.nix { inherit (vendor) harogic-htra-sdk; };
-  gr-signal-hound = callPackage ./oot/gr-signal-hound.nix { inherit (vendor) signalhound-sdk; };
+  gr-htra = withExamples (callPackage ./oot/gr-htra.nix { inherit (vendor) harogic-htra-sdk; });
+  gr-signal-hound = withExamples (callPackage ./oot/gr-signal-hound.nix { inherit (vendor) signalhound-sdk; });
 
   # Source deps not in nixpkgs, needed by a few OOT modules.
-  itpp = callPackage ./itpp.nix { };
-  turbofec = callPackage ./turbofec.nix { };
+  itpp = darwinLib (callPackage ./itpp.nix { });
+  turbofec = darwinLib (callPackage ./turbofec.nix { });
   crcpp = callPackage ./crcpp.nix { };
   libspectranstream = callPackage ./libspectranstream.nix { };
-  fdk-aac-hdc = callPackage ./fdk-aac-hdc.nix { };
+  fdk-aac-hdc = darwinLib (callPackage ./fdk-aac-hdc.nix { });
 
   gnuradio-rfswift = callPackage ./gnuradio-rfswift.nix {
     inherit gr-osmosdr-penthertz gr-rds gr-iridium gr-satellites gr-gsm
@@ -216,10 +320,18 @@ RULES
       gr-zwave_poore gr-mixalot gr-reveng gr-j2497 gr-m17
       gr-grnet gr-aoa gr-correctiq gr-dsd gr-nrsc5 gr-ntsc-rc gr-mer gr-flarm
       gr-guiextra gr-rftap gr-radio_astro gr-cessb gr-hydrasdr gr-bladeRF gr-funcube
-      gr-htra gr-signal-hound;
+      gr-htra gr-signal-hound gnuradio-hier-blocks;
+    inherit gnuradioBundle;
   };
   gnuradio-rfswift-light = callPackage ./gnuradio-rfswift-light.nix {
     inherit gr-osmosdr-penthertz gr-hydrasdr gr-bladeRF gr-funcube;
+    inherit gnuradioBundle;
+  };
+  # Precompiled hierarchical blocks the OOT examples use (bundled into
+  # gnuradio-rfswift).
+  gnuradio-hier-blocks = callPackage ./gnuradio-hier-blocks.nix {
+    inherit gr-foo gr-ieee802-11 gr-ieee802-11ah gr-ieee802-15-4 gr-ieee80211
+      gr-tempest gr-gfdm gr-ais gr-flarm gr-funcube;
   };
 
   ## --- PentHertz / HydraSDR forks (compiled from source) ----------------
@@ -299,7 +411,7 @@ RULES
   libxtrxll = callPackage ./libxtrxll.nix { inherit libusb3380; };
   libxtrx = callPackage ./libxtrx.nix { inherit liblms7002m libxtrxdsp libxtrxll; };
   # FUNcube Dongle: GNU Radio blocks + Qt controller.
-  gr-funcube = callPackage ./oot/gr-funcube.nix { };
+  gr-funcube = withExamples (callPackage ./oot/gr-funcube.nix { });
   qthid = callPackage ./qthid.nix { };
   # RFNM: host library + SoapySDR module.
   librfnm = callPackage ./librfnm.nix { };
@@ -432,6 +544,51 @@ RULES
   "python3Packages.doipclient" = pkgs.python3Packages.callPackage ./doipclient.nix { };
 
   ## --- Android / network (source Python) -------------------------------
+  # nixpkgs' chisel builds every main package of the repo, so its test
+  # benchmark lands on PATH as a bare `bench`. Running it - even as
+  # `bench --version` - starts a chisel server on *:2002 with the hard-coded
+  # key "foobar" plus a client on *:2001, both daemonized. Keep only `chisel`.
+  chisel = pkgs.chisel.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      rm $out/bin/bench
+    '';
+  });
+  # nixpkgs' john wraps its *.pl helpers with PERL5LIB="$PERL5LIB:...", but
+  # $PERL5LIB is empty at fixup, so the Perl modules it lists never reach them
+  # (7z2john.pl: "Can't locate Compress/Raw/Lzma.pm", pass_gen.pl: Digest::MD4)
+  # and their `#!/usr/bin/env perl` takes whatever perl is on PATH. Pin the
+  # interpreter and give the wrappers the real module path. Also add the Python
+  # modules several *2john.py helpers import (apfs2hashcat, bisq/coinomi/
+  # multibit (protobuf), cardano (cbor2), ccache/kirbi (pyasn1), zed (Crypto)).
+  john = pkgs.john.overrideAttrs (old: {
+    propagatedBuildInputs = (old.propagatedBuildInputs or [ ])
+      ++ (with pkgs.python3Packages; [ cryptography protobuf cbor2 pyasn1 pycryptodome ]);
+    # coinomi/multibit2john import john's precompiled protobuf/*_pb2.py and
+    # keplr2john its bundled ccl_chrome_indexeddb, both shipped in run/ next to
+    # the scripts but not installed. Put them on the wrapped scripts' path
+    # (not run/dns, which would shadow dnspython's `dns`). Likewise rulestack.pl
+    # loads run/jtrconf.pm: add it to john's own Perl library dir.
+    postInstall = (old.postInstall or "") + ''
+      mkdir -p $out/${pkgs.python3.sitePackages}
+      cp -r ../run/protobuf ../run/ccl_chrome_indexeddb $out/${pkgs.python3.sitePackages}/
+      cp ../run/jtrconf.pm $out/${pkgs.perlPackages.perl.libPrefix}/
+    '';
+    postFixup = ''
+      wrapPythonPrograms
+      for i in $out/bin/*.pl; do
+        sed -i -E '1s@^#! *(/usr/bin/env +)?[^ ]*perl@#!${pkgs.perl}/bin/perl@' "$i"
+        wrapProgram "$i" --prefix PERL5LIB : "${pkgs.perlPackages.makeFullPerlPath (with pkgs.perlPackages; [
+          DigestMD4 DigestSHA1 GetoptLong CompressRawLzma perlldap DBI DBDSQLite
+        ])}:$out/${pkgs.perlPackages.perl.libPrefix}"
+      done
+      # Their _pb2 modules were generated by an old protoc, which protobuf >= 4's
+      # compiled backend rejects ("Descriptors cannot be created directly");
+      # protobuf's documented workaround is its pure-Python backend.
+      for i in coinomi2john.py multibit2john.py; do
+        wrapProgram "$out/bin/$i" --set PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION python
+      done
+    '';
+  });
   drozer = callPackage ./sec/drozer.nix { jdk = pkgs.jdk; };
   smali = callPackage ./smali.nix { };
   autorecon = callPackage ./sec/autorecon.nix { };
@@ -484,6 +641,7 @@ RULES
   socketcand = callPackage ./sec/socketcand.nix { };
   lsassy = callPackage ./sec/lsassy.nix { };
   bloodyad = callPackage ./sec/bloodyad.nix { };
+  certsync = callPackage ./sec/certsync.nix { };
 
   ## --- Web / network exploitation (source Python) ----------------------
   sstimap = callPackage ./sec/sstimap.nix { };

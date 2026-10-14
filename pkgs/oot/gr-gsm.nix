@@ -17,6 +17,9 @@ gnuradioPackages.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config perl python3Packages.pybind11 python3Packages.mako python3Packages.six python3Packages.pyyaml ];
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat libosmocore gr-osmosdr-penthertz python3Packages.numpy ];
+  # Python modules its blocks import at run time: propagated so a GNU Radio
+  # wrapper bundling the module adds them to its Python environment.
+  propagatedBuildInputs = with python3Packages; [ six pyyaml ];
   cmakeFlags = [
     "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
     # grcc can't resolve OOT blocks inside the sandbox (the makefile scrubs the

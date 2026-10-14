@@ -12,7 +12,6 @@ let
   asset = {
     "x86_64-linux" = "Linux_x86_64";
     "aarch64-linux" = "Linux_arm64";
-    "x86_64-darwin" = "Darwin_x86_64";
     "aarch64-darwin" = "Darwin_arm64";
   }.${stdenv.hostPlatform.system}
     or (throw "phoneinfoga: unsupported platform ${stdenv.hostPlatform.system}");
@@ -20,7 +19,6 @@ let
   hash = {
     Linux_x86_64 = "sha256-YXPfxOwAmm/miAaLrFolBkb1qPVkCQmPXtzH5ASxKlI=";
     Linux_arm64 = "sha256-vI7VHj4g/kuCmZqsFqeSX3g1YjRlY7pLJuM8kENM1Ys=";
-    Darwin_x86_64 = "sha256-OZC6ytIksYZ9TnbLBrg9Acmg6HtSnMjk4yvLPjl5PSg=";
     Darwin_arm64 = "sha256-XSWYU+aY/BuOH9YgtUFrmBXfW3CaDtrlPKibWatleKI=";
   }.${asset};
 in
@@ -51,8 +49,6 @@ stdenv.mkDerivation {
     homepage = "https://github.com/sundowndev/phoneinfoga";
     license = lib.licenses.gpl3Only;
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
-    # x86_64-darwin omitted: this nixpkgs pin (26.11) dropped it. The release has
-    # a Darwin_x86_64 asset, so adding it back there is all that is needed.
     platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
     mainProgram = "phoneinfoga";
   };

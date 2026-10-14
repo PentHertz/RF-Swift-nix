@@ -10,8 +10,9 @@
 
   outputs = { self, nixpkgs, nixpkgs-py310, ... }:
     let
-      # Systems RF Swift Nix environments are built for.
-      systems = [ "x86_64-linux" "aarch64-linux" "riscv64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      # Systems RF Swift Nix environments are built for. No x86_64-darwin:
+      # nixpkgs 26.11 dropped it (every package there throws on evaluation).
+      systems = [ "x86_64-linux" "aarch64-linux" "riscv64-linux" "aarch64-darwin" ];
 
       # The environment catalog (pure data): { <image> = { description; packages = [str]; ... }; }
       rawEnvironments = import ./environments.nix;
@@ -64,8 +65,134 @@
               cantools = pyprev.cantools.overridePythonAttrs (o: {
                 doCheck = false;
               });
+              # psrpcore is pure Python; nixpkgs marks it broken on Darwin only
+              # because its test suite drives a real PowerShell. That takes
+              # netexec (ad, network) down with it on macOS. Skip the checks
+              # there and keep the library.
+              psrpcore = pyprev.psrpcore.overridePythonAttrs (o: {
+                doCheck = false;
+                nativeCheckInputs = [ ];
+                meta = (o.meta or { }) // { broken = false; };
+              });
+              # pycrate lists pysctp only for pycrate_corenet (its core-network
+              # server), and pysctp needs lksctp-tools, which is Linux-only
+              # (macOS has no kernel SCTP). On Darwin that took pycrate - and
+              # with it qcsuper and the telecom environments' ASN.1/NAS/RRC
+              # codecs - out of every environment. Drop pysctp and the corenet
+              # import check there; the rest of pycrate is pure Python. Match on
+              # pname so pysctp's Linux-only derivation is never forced.
+              pycrate = pyprev.pycrate.overridePythonAttrs (o: {
+                dependencies = builtins.filter (d: (d.pname or "") != "pysctp") (o.dependencies or [ ]);
+                pythonImportsCheck = prev.lib.remove "pycrate_corenet" (o.pythonImportsCheck or [ ]);
+              });
             })
           ];
+          # NetExec and DonPAPI each declare a console script twice, differing
+          # only in case (`NetExec`/`netexec`, `DonPAPI`/`donpapi`). On a
+          # case-insensitive filesystem (macOS's default APFS) both names are
+          # one file and the wheel install fails with FileExistsError, which is
+          # why nixpkgs marks them broken on Darwin. Drop the mixed-case script
+          # there; it still resolves to the lowercase one on such a filesystem.
+          netexec = prev.netexec.overridePythonAttrs (o: {
+            postPatch = (o.postPatch or "") + ''
+              sed -i '/^NetExec = /d' pyproject.toml
+            '';
+            meta = (o.meta or { }) // { broken = false; };
+          });
+          donpapi = prev.donpapi.overridePythonAttrs (o: {
+            postPatch = (o.postPatch or "") + ''
+              sed -i '/^DonPAPI = /d' pyproject.toml
+            '';
+            meta = (o.meta or { }) // { broken = false; };
+          });
+          # nixpkgs' Darwin postFixup only rewrites the library references that
+          # contain /private/tmp/, the old Darwin build directory. Nix >= 2.30
+          # builds in /nix/var/nix/builds/, so every samba binary (smbclient,
+          # rpcclient, net, nmblookup, ...) keeps build-directory install names
+          # and dies in dyld ("Library not loaded") - the cache.nixos.org build
+          # included. After upstream's pass, point any reference outside the
+          # store/system at the library of that name in $out (its Python .so
+          # modules too, which upstream's pass skips), and fail if one remains.
+          samba = prev.samba.overrideAttrs (old: {
+            postFixup = (old.postFixup or "") + ''
+              # Public libraries are reached through symlinks (libndr.dylib ->
+              # libndr.6.0.0.dylib), so list links as well as files.
+              find $out \( -type f -o -type l \) \( -name '*.dylib' -o -name '*.so' \) >"$TMPDIR/samba-libs"
+              # Plain for-loop and otool, not `find | while read -d ""` with
+              # stdenv's isMachO: that pattern segfaulted the builder's bash
+              # (exit 139) on aarch64-darwin. Store paths hold no spaces.
+              for f in $(find $out -type f); do
+                otool -h "$f" 2>/dev/null | grep -q '^Mach header' || continue
+                for dep in $(otool -L "$f" | tail -n +2 | awk '{print $1}' \
+                    | grep -vE '^(/nix/store/|/usr/lib/|/System/|@)'); do
+                  new=$(grep -m1 "/$(basename "$dep")\$" "$TMPDIR/samba-libs" || true)
+                  if [ -z "$new" ]; then
+                    echo "samba: $f references $dep, not found in $out" >&2
+                    exit 1
+                  fi
+                  if [ "$(basename "$dep")" = "$(basename "$f")" ]; then
+                    install_name_tool -id "$f" "$f"
+                  else
+                    install_name_tool -change "$dep" "$new" "$f"
+                  fi
+                done
+              done
+              # samba-gpupdate applies AD Group Policy to a Linux client. Its
+              # samba.gpo module needs libads' ads_connect_creds, which a
+              # Darwin build (no AD/Kerberos-LDAP support) does not have, so
+              # it can only crash here; do not ship it.
+              rm $out/bin/samba-gpupdate
+            '';
+          });
+          # Caido's desktop UI is Electron. Inside an `rfswift --isolate` jail
+          # (RFSWIFT_ISOLATED=1) Chromium cannot start its own sandbox - macOS
+          # refuses a sandbox nested in the jail's - and the app dies at start.
+          # Pass --no-sandbox there only; the jail confines it instead.
+          caido-desktop = prev.caido-desktop.overrideAttrs (o: {
+            postFixup = (o.postFixup or "") + ''
+              wrapProgram $out/bin/caido-desktop \
+                --add-flags "\''${RFSWIFT_ISOLATED:+--no-sandbox}"
+            '';
+          });
+          # keystone's kstool links @rpath/libkeystone.0.dylib but carries no
+          # LC_RPATH at all, so dyld cannot load it. Point it at $out/lib.
+          keystone = prev.keystone.overrideAttrs (o: {
+            postFixup = (o.postFixup or "") + ''
+              install_name_tool -add_rpath "$out/lib" "$out/bin/kstool"
+            '';
+          });
+          # radare2 installs its sdb library as lib/libsdb.dylib with the
+          # install name @rpath/libsdb.2.5.0.dylib, and bin/r2sdb (rpath
+          # @loader_path/ only) asks for that name: "Library not loaded".
+          # Make the id and r2sdb's reference the real file.
+          radare2 = prev.radare2.overrideAttrs (o: {
+            postFixup = (o.postFixup or "") + ''
+              install_name_tool -id "$out/lib/libsdb.dylib" "$out/lib/libsdb.dylib"
+              install_name_tool -change @rpath/libsdb.2.5.0.dylib "$out/lib/libsdb.dylib" "$out/bin/r2sdb"
+            '';
+          });
+          # On Darwin qmake installs SigDigger.app straight into bin/, so the
+          # `SigDigger` command (its mainProgram, what rfswift's shims and
+          # `env run` call) does not exist. The bundle's binary is already the
+          # Qt wrapper: link it into bin/ after the wrap hook has run.
+          sigdigger = prev.sigdigger.overrideAttrs (o: {
+            postFixup = (o.postFixup or "") + ''
+              ln -s SigDigger.app/Contents/MacOS/SigDigger $out/bin/SigDigger
+            '';
+          });
+          # nixpkgs marks bettercap broken on Darwin: since Go 1.23 the linker
+          # rejects the go:linkname to syscall.recvmsg in the golang.org/x/net
+          # it vendors. -checklinkname=0 restores the old linker behaviour; it
+          # then builds and runs (CoreWLAN + libpcap) on macOS.
+          bettercap = prev.bettercap.overrideAttrs (o: {
+            ldflags = (o.ldflags or [ ]) ++ [ "-checklinkname=0" ];
+            meta = (o.meta or { }) // { broken = false; };
+          });
+          # nixpkgs marks xnec2c broken on Darwin ("likely to be fixed upstream
+          # in the next release"); 4.4.18 on this pin builds and runs there.
+          xnec2c = prev.xnec2c.overrideAttrs (o: {
+            meta = (o.meta or { }) // { broken = false; };
+          });
           # nixpkgs adds QtWebEngine unconditionally, although Cutter 2.5.0
           # neither finds nor links it (the source only prepares OpenGL sharing
           # for third-party plugins that may choose to use WebEngine). Keeping
@@ -86,6 +213,23 @@
           });
         };
 
+      # Runtime dependencies nixpkgs packages forget to declare, fixed in the
+      # package set itself so each stays one derivation for every tool that
+      # pulls it in (a python3.withPackages env rejects two copies of a
+      # package). Applies on every platform.
+      missingDepsOverlay = final: prev: {
+        pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
+          (pyfinal: pyprev: {
+            # impacket's example scripts import kintercept.py `asyncore`
+            # (removed in Python 3.12; pyasyncore is the backport) and
+            # sniff.py/split.py `pcapy` (pcapy-ng), which the library omits.
+            impacket = pyprev.impacket.overridePythonAttrs (old: {
+              dependencies = (old.dependencies or [ ]) ++ [ pyfinal.pyasyncore pyfinal.pcapy-ng ];
+            });
+          })
+        ];
+      };
+
       # Python dependencies whose upstream test suites fail nondeterministically
       # on this nixpkgs pin - timing- or calendar-sensitive checks that break the
       # build depending on the runner and the date, not on our code. Skip only the
@@ -99,6 +243,15 @@
         # consumed C++ dep, not our code, so drop the install check like the
         # Python suites below.
         arrow-cpp = prev.arrow-cpp.overrideAttrs (_: { doInstallCheck = false; });
+        # gdal then builds from source too (it links arrow-cpp). Several of its
+        # install-check tests (tiff_ovr_huge_raster_with_ovr_huge_block, one in
+        # tiff_write, ...) expect GDAL to refuse a deliberately huge allocation,
+        # but GDAL weighs that against usable RAM: on a 16 GB builder it tries
+        # instead, the test process reaches 13-15.5 GB and is OOM-killed,
+        # taking the geopandas/meshtastic Python stack down. Which tests trip
+        # depends on the builder's RAM, so drop the install check like
+        # arrow-cpp's above.
+        gdal = prev.gdal.overrideAttrs (_: { doInstallCheck = false; });
 
         pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
           (pyfinal: pyprev: {
@@ -142,6 +295,20 @@
             # runner, not our code. It is a consumed dep (bumble/bleak/pyee pull
             # it into the bluetooth environment), so skip its check like the rest.
             twisted = pyprev.twisted.overridePythonAttrs (_: { doCheck = false; });
+            # psutil's test_heap_info asserts that glibc reports mmap'd heap in
+            # use (mallinfo2 hblkhd > 0). Under CPython 3.12 on aarch64-linux the
+            # test process holds none and it fails every time (assert 0 > 0, in
+            # two different VMs), taking impacket, netexec, certipy and the rest
+            # of the 3.12 AD tooling down with it. Scoped to that combination:
+            # the 3.14 build comes from cache.nixos.org and much of the cached
+            # Python set depends on it, while 3.12 builds from source anyway.
+            psutil =
+              if pyprev.python.pythonVersion == "3.12"
+                && final.stdenv.hostPlatform.isLinux && final.stdenv.hostPlatform.isAarch64
+              then pyprev.psutil.overridePythonAttrs (o: {
+                disabledTests = (o.disabledTests or [ ]) ++ [ "test_heap_info" ];
+              })
+              else pyprev.psutil;
             # pytest-benchmark's own test suite runs live microbenchmarks
             # (time.perf_counter calibration loops with a max_time budget). On a
             # loaded or shared builder the timing never stabilizes and the
@@ -203,6 +370,12 @@
             # plotly, which quark-engine, apkleaks (android) and theharvester
             # (osint) pull in, so the two checks take both environments down.
             psygnal = pyprev.psygnal.overridePythonAttrs (_: { doCheck = false; });
+            # syrupy (snapshot-testing plugin) fails 1 of ~470 checks on
+            # aarch64-darwin: test_update_failure_shows_snapshot_diff[xdist_two]
+            # is a strict xfail ("not compatible with xdist") that passes there,
+            # so pytest reports XPASS(strict). It is a test-only dep of
+            # tldextract, which hexhttp (network) pulls in; skip its checks.
+            syrupy = pyprev.syrupy.overridePythonAttrs (_: { doCheck = false; });
           }
           # httpx2/httpcore2 are the httpx 2.x pre-release attrs; guard with
           # optionalAttrs so a later pin that renames or drops them still evals.
@@ -226,7 +399,7 @@
           # android buildEnv fails even though a shallow devShell eval passes.
           android_sdk.accept_license = true;
         };
-        overlays = [ pyqtNoWebengineOverlay flakyPyTestsOverlay ];
+        overlays = [ pyqtNoWebengineOverlay missingDepsOverlay flakyPyTestsOverlay ];
       };
 
       lib = nixpkgs.lib;
@@ -290,13 +463,26 @@
             map (name: { inherit name; } // resolvePkgResult pkgs custom name) declared;
           present = builtins.filter (x: x.drv != null) resolved;
           absent = builtins.filter (x: x.drv == null) resolved;
+          # The Python libraries an environment lists (python3Packages.*) must
+          # import from its `python3`. A buildEnv links their site-packages but
+          # neither their propagated dependencies nor a path the bare
+          # interpreter searches, so `python3 -c "import impacket"` failed in
+          # every profile. Ship python3.withPackages over those libraries in
+          # place of the bare interpreter; the libraries stay listed so their
+          # own commands are unchanged.
+          pyLibs = map (x: x.drv)
+            (builtins.filter (x: lib.hasPrefix "python3Packages." x.name) present);
+          pythonFor = x:
+            if x.name == "python3" && pyLibs != [ ]
+            then pkgs.python3.withPackages (_: pyLibs)
+            else x.drv;
           note = lib.optionalString (absent != [ ])
             (builtins.trace
               "RF-Swift-nix: ${builtins.toString (builtins.length absent)} package(s) omitted on ${system}: ${lib.concatMapStringsSep ", " (x: "${x.name} (${x.status})") absent}"
               "");
         in
         {
-          drvs = map (x: x.drv) present;
+          drvs = map pythonFor present;
           absent = map (x: x.name) absent;
           manifest = {
             inherit system;
@@ -411,7 +597,7 @@
               allowUnfree = true;
               android_sdk.accept_license = true;
             };
-            overlays = [ self.overlays.default pyqtNoWebengineOverlay flakyPyTestsOverlay ];
+            overlays = [ self.overlays.default pyqtNoWebengineOverlay missingDepsOverlay flakyPyTestsOverlay ];
           };
           # The reusable overlay cannot carry the separate nixpkgs-py310 input.
           # Merge customFor here so user-facing names such as `mirage` and

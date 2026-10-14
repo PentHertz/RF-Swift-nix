@@ -22,9 +22,12 @@ buildGoModule {
   tags = [ "netgo" ];
   ldflags = [ "-w" "-s" ];
 
-  # Keep the image's command name (the module is called "bytecaster").
+  # Keep the image's command name (the module is called "bytecaster"). A
+  # case-only rename is refused by `mv` on a case-insensitive filesystem
+  # (macOS's default APFS: "are the same file"), so go through a temporary name.
   postInstall = ''
-    mv $out/bin/bytecaster $out/bin/ByteCaster
+    mv $out/bin/bytecaster $out/bin/.bytecaster-rename
+    mv $out/bin/.bytecaster-rename $out/bin/ByteCaster
   '';
 
   meta = {

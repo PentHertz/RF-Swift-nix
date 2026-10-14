@@ -1,6 +1,6 @@
 # RF Swift Nix verification audit
 
-Last updated: 2026-08-24
+Last updated: 2026-10-14
 
 This is the living verification record for the RF Swift Nix engine. It separates
 what was evaluated, what was actually built and executed, and what still needs
@@ -154,7 +154,119 @@ authoritative all-environment build gate, but a complete green matrix has not
 yet been observed for the current tree. Do not label the full Nix port complete
 until that evidence exists.
 
+## Evidence collected on 2026-10-13/14
+
+Host: Apple Silicon Mac (`aarch64-darwin`), Nix 2.35.2. Linux builds ran on the
+same Mac in OrbStack containers (`nixos/nix`, Nix 2.35.3) with the Nix sandbox
+on: `aarch64-linux` natively, `x86_64-linux` under Rosetta.
+
+**macOS.** All 17 environments were created through `rfswift --isolate` and
+every declared command was probed inside the jail.
+
+- GNU Radio: all OOT modules but gr-gsm, gr-aaronia_rtsa and gr-dvbs2 build
+  (see README "Known gaps").
+- Every bundled module's GRC blocks were imported, constructed and fed 100k
+  samples through GRC's own platform code. The fixes below took import
+  failures from 186 to 1 (gr-tempest's `image_source`). That one was then
+  fixed and checked directly, without a new full run. The remaining errors
+  are harness limits: blocks that need parameters, hardware or a sync word.
+- `gnuradio-companion --qt` starts. Its example browser indexes 547 example
+  flowgraphs in 61 modules, and 507 of them use only blocks GRC knows. The
+  others need modules or hardware that are not bundled, or blocks GNU Radio
+  3.10 renamed.
+
+**Linux.** Rather than evaluating only, every derivation whose hash changed
+against `HEAD` was built. The set was found by diffing each environment's
+derivation closure at `HEAD` and in the working tree: about 200 per
+architecture at first, 205 (x86_64) and 242 (aarch64) once the psutil and gdal
+fixes below had landed. The `rfswift-<env>` profile roots were left out, since
+they only link packages.
+
+| | built | not built |
+|---|---|---|
+| aarch64-linux | all 161, plus meshtastic-sdr and all 16 per-environment Python envs (torch included) | none |
+| x86_64-linux | 162 of 164, plus 13 of 14 per-environment Python envs | mobsf, theharvester; meshtastic-sdr and the two Python envs that need torch |
+
+- aarch64 covers all 56 GNU Radio modules, gr-gsm and gr-dvbs2 included.
+- x86_64 covers all 57, including the x86_64-only gr-htra and gr-aaronia_rtsa.
+- Both cover the hierarchical blocks, both GNU Radio bundles, gqrx, op25, and
+  the Python/AD tool fixes.
+
+Some items cannot be built on Apple Silicon at all. They are all unchanged
+nixpkgs packages, and they still need a real `x86_64-linux` machine (see
+"Remaining completion gates"):
+
+- `python312Packages.frida-python`: its import check dies with SIGTRAP under
+  Rosetta. This blocks mobsf through the android Python environment.
+- `python3Packages.dask`: a strict-xfail test passes under Rosetta, which
+  blocks theharvester.
+- `python3Packages.torch`: not on cache.nixos.org at this pin. Compiling it
+  under Rosetta froze the 16 GB OrbStack VM three times, even at three jobs.
+  It blocks meshtastic-sdr and sdr_full's ML Python environments.
+
+QEMU user-mode emulation is no way around this: Nix itself segfaults under it.
+
 ## Defects found and fixed
+
+### Qt GRC crashed at startup
+
+`gnuradio-companion --qt` is the only GRC interface with an example browser,
+but it failed before showing a window. nixpkgs' GNU Radio wrapper does not add
+`qtpy`, and GRC's `run_qt` reads `languages` before assigning it whenever
+`locale.getdefaultlocale()` finds no language. That covers `LC_CTYPE=UTF-8`,
+macOS Terminal's default, and `C.UTF-8`. Both bundles now add `qtpy`, and the
+bundle's own copy of the launcher reports English when no language is set
+(`pkgs/lib/grc-locale-fix.py`). GNU Radio itself is untouched.
+
+### GNU Radio OOT modules missed runtime Python dependencies
+
+Running every module's GRC blocks showed import failures. Most of them came
+from Python modules a package used at run time but only listed as build
+inputs (or not at all):
+
+- gr-satellites: construct, requests, pyyaml, websocket-client;
+- gr-nordic: bitstring;
+- gr-tempest: pillow;
+- gr-flarm: pytz;
+- gr-air-modes: pyzmq, scipy;
+- gr-uaslink: pymavlink;
+- gr-gfdm: scikit-commpy, now packaged;
+- gr-gsm, gr-dvbs2, gr-radio_astro, gr-radar: likewise.
+
+They are now propagated, so GNU Radio's wrapper adds them to its Python
+environment. Upstream code bugs were patched too:
+
+- flarm and air-modes used numpy 2's removed `tostring`/`numpy.float`;
+- tempest's and timing_utils' block files had wrong imports;
+- uaslink did not install three of its modules.
+
+### gr-droneid did not load on macOS
+
+turbofec defines `__always_inline` as plain C99 `inline` on Mach-O. That emits
+no external definition, so the K=7 Viterbi kernels clang chose not to inline
+stayed undefined in the dylib. Loading it failed with `symbol not found in flat
+namespace '__sse_metrics_k7_n2'`. On Darwin, the macro now gets glibc's
+semantics. Linux derivations are unchanged.
+
+### psutil failed on Python 3.12, aarch64 Linux
+
+`test_heap_info` asserts that glibc reports mmap'd heap in use. Under CPython
+3.12 on aarch64 Linux it fails every time (`assert 0 > 0`, reproduced on two
+different kernels). That took impacket, netexec, certipy and the rest of the
+3.12 AD tooling down with it. `flake.nix` disables that one test for that one
+combination. The 3.14 build, which comes from cache.nixos.org and which much
+of the cached Python set depends on, keeps its hash.
+
+### gdal's install check exceeded 16 GB builders
+
+gdal builds from source because it links the overridden arrow-cpp. Several of
+its tests expect GDAL to refuse a deliberately huge allocation, but GDAL weighs
+that against usable RAM. On a 16 GB builder it attempts the allocation instead,
+and the test process is OOM-killed at 13-15.5 GB, according to the kernel log.
+That broke geopandas, meshtastic and sdr_full's Python environment. Which tests
+trip depends on the builder's memory, so the install check is dropped as for
+arrow-cpp. This loses no binary-cache hits, since gdal was already a local
+build on every platform.
 
 ### Android environment did not force
 
@@ -341,6 +453,33 @@ worth doing in `RF-Swift`:
 
 ## Remaining completion gates
 
+- Build what Apple Silicon could not, on a real `x86_64-linux` machine. Use
+  one with at least 32 GB of RAM, or cap parallelism (`--cores 4`): torch's
+  compile needs more than 16 GB at default parallelism.
+
+  Targeted, about the six blocked derivations:
+
+  ```bash
+  nix build --no-link --print-build-logs \
+    .#legacyPackages.x86_64-linux.python3Packages.torch \
+    .#legacyPackages.x86_64-linux.python3Packages.dask \
+    .#legacyPackages.x86_64-linux.python312Packages.frida-python \
+    .#legacyPackages.x86_64-linux.meshtastic-sdr \
+    .#legacyPackages.x86_64-linux.mobsf \
+    .#legacyPackages.x86_64-linux.theharvester
+  ```
+
+  Then the environments that contain them, with their command checks:
+
+  ```bash
+  ./tests/smoke-environment.sh sdr_full   # torch, meshtastic-sdr, dask
+  ./tests/smoke-environment.sh android    # frida-python (Python 3.12), mobsf
+  ./tests/smoke-environment.sh osint      # dask, theharvester
+  ```
+
+  If dask fails only on its strict-xfail `test_concat_categorical` there too,
+  the failure is not Rosetta's. It then needs a check override like the ones
+  in `flakyPyTestsOverlay`.
 - Observe a green required build-and-command matrix for all 14 x86_64 Linux
   environments on the pinned lock file.
 - Add deterministic functional fixtures for representative native, Python,

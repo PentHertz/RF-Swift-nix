@@ -17,7 +17,9 @@ in python3Packages.buildPythonApplication {
     patchShebangs src/drozer/lib/d8
   '';
   build-system = pick [ "setuptools" ];
-  dependencies = pick [ "protobuf" "pyopenssl" "twisted" "service-identity" "distro" "click" "pyyaml" ];
+  # pyproject.toml also requires requests and prompt_toolkit (drozer-complete,
+  # drozer-repository and the console import them).
+  dependencies = pick [ "protobuf" "pyopenssl" "twisted" "service-identity" "distro" "click" "pyyaml" "requests" "prompt-toolkit" ];
   pythonRelaxDeps = true; dontCheckRuntimeDeps = true; doCheck = false;
   meta = { description = "Android security assessment framework"; homepage = "https://github.com/WithSecureLabs/drozer"; license = lib.licenses.bsd3; mainProgram = "drozer"; };
 }

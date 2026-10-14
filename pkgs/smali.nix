@@ -34,7 +34,8 @@ stdenv.mkDerivation {
     description = "Assembler/disassembler for Android dex (smali + baksmali)";
     homepage = "https://github.com/JesusFreke/smali";
     license = lib.licenses.bsd3;
-    platforms = lib.platforms.linux;
+    # Plain jars behind a JRE wrapper: runs wherever the JRE does.
+    platforms = lib.platforms.unix;
     mainProgram = "baksmali";
   };
 }

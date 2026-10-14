@@ -30,6 +30,6 @@ python3Packages.buildPythonApplication rec {
     homepage = "https://pypi.org/project/crypto-condor/";
     license = lib.licenses.gpl3Plus;
     platforms = lib.platforms.unix;
-    mainProgram = "crypto-condor";
+    mainProgram = "crypto-condor-cli";
   };
 }

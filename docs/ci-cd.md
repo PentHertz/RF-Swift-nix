@@ -9,8 +9,8 @@ The current Nix environment release line is **v1.0.0-dev** from `main`.
 - `cache-riscv64.yml` builds `riscv64-linux` with registered QEMU user-mode
   emulation.
 - `cache-darwin.yml` builds `aarch64-darwin` (Apple Silicon) on GitHub's
-  `macos-14` runner. `x86_64-darwin` stays evaluation-only in `ci.yml` because
-  GitHub no longer offers Intel macOS runners.
+  `macos-14` runner. Intel Macs (`x86_64-darwin`) are not supported: nixpkgs
+  26.11 dropped that platform, and GitHub no longer offers Intel macOS runners.
 
 The workflows do not depend on each other and every matrix uses
 `fail-fast: false`. Each job publishes to the self-hosted attic binary cache

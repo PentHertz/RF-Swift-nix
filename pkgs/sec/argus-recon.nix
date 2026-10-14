@@ -17,6 +17,9 @@ python3Packages.buildPythonApplication rec {
   dependencies = with python3Packages; [
     requests urllib3 rich dnspython paramiko beautifulsoup4 lxml jinja2
     packaging python-slugify mmh3 idna
+    # Imported by its modules but not declared in the wheel metadata (the
+    # console is a cmd2 app, so without cmd2 nothing starts).
+    cmd2 colorama tabulate pyopenssl aiohttp aioquic pyjwt pysnmp
   ];
   # Upstream pins conservative upper bounds (rich<14, packaging<25); this pin
   # ships newer. Relax so it builds against them.

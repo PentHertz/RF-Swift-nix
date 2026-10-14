@@ -48,6 +48,15 @@ stdenv.mkDerivation {
     substituteInPlace src/conv_sse.h src/turbo_sse.h \
       --replace-fail $'#ifdef HAVE_SSE3\n#include <stdint.h>' \
         $'#ifdef HAVE_SSE3\n#define RFSWIFT_MM_SET_EPI8_(...) _mm_set_epi8(__VA_ARGS__)\n#define RFSWIFT_MM_SET_EPI8(...) RFSWIFT_MM_SET_EPI8_(__VA_ARGS__)\n#define RFSWIFT_MM_SET_EPI16_(...) _mm_set_epi16(__VA_ARGS__)\n#define RFSWIFT_MM_SET_EPI16(...) RFSWIFT_MM_SET_EPI16_(__VA_ARGS__)\n#include <stdint.h>'
+  '' + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    # On Darwin upstream defines __always_inline as plain C99 `inline`, which
+    # emits no external definition: kernels clang does not inline (the K=7
+    # metrics) stay undefined in the dylib, and loading it fails ("symbol not
+    # found in flat namespace '__sse_metrics_k7_n2'"). glibc's definition, used
+    # on Linux, forces inlining; do the same.
+    substituteInPlace src/conv_sse.h --replace-fail \
+      '#define __always_inline inline' \
+      '#define __always_inline static inline __attribute__((always_inline))'
   '';
 
   # turbofec's SIMD kernels use SSE4.1 and AVX2 intrinsics; without the ISA flags

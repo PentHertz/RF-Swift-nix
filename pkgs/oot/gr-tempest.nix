@@ -18,6 +18,16 @@ gnuradioPackages.mkDerivation {
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];
   buildInputs = [ boost spdlog gmp volk fftwFloat ]
     ++ (with python3Packages; [ numpy pillow ]);
+  # Python modules its blocks import at run time: propagated so a GNU Radio
+  # wrapper bundling the module adds them to its Python environment.
+  propagatedBuildInputs = [ python3Packages.pillow ];
+  # The Python blocks' GRC definitions import the module as top-level
+  # `tempest`; it installs as gnuradio.tempest.
+  postPatch = ''
+    substituteInPlace grc/tempest_image_source.block.yml grc/tempest_message_to_var.block.yml \
+      grc/tempest_tempest_msgbtn.block.yml \
+      --replace-fail "imports: import tempest" "imports: from gnuradio import tempest"
+  '';
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
 
   meta = {

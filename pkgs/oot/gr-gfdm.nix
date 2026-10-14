@@ -1,5 +1,5 @@
 # Generalized Frequency Division Multiplexing (OOT for GNU Radio 3.10).
-{ lib , fetchFromGitHub , gnuradioPackages , cmake , pkg-config , boost , spdlog , gmp , log4cpp , volk , fftwFloat , python3Packages, fmt }:
+{ lib , fetchFromGitHub , gnuradioPackages , cmake , pkg-config , boost , spdlog , gmp , log4cpp , volk , fftwFloat , python3Packages, fmt, scikit-commpy }:
 
 gnuradioPackages.mkDerivation {
   pname = "gr-gfdm";
@@ -14,6 +14,10 @@ gnuradioPackages.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat python3Packages.numpy fmt ];
+  # The Python helpers (gfdm.pygfdm) the receiver blocks and examples import.
+  # Propagated so a GNU Radio wrapper bundling the module adds them to its
+  # Python environment.
+  propagatedBuildInputs = [ python3Packages.scipy scikit-commpy ];
   postPatch = ''
     for x in $(grep -rl 'fmt::format' lib include python 2>/dev/null); do
       sed -i '1i #include <fmt/format.h>' "$x"

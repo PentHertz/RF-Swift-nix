@@ -39,6 +39,12 @@ open5gs.overrideAttrs (old: {
     # tests/app/5gc runs every 5G core network function in one process; it is
     # the "deploy all" entry point the image exposes for this variant.
     install -Dm755 tests/app/5gc "$out/bin/${name}"
+  '' + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    # 5gc is a build-tree test binary meson never installs: its rpaths are all
+    # @loader_path/../../lib/<subdir> into the build tree, so dyld cannot find
+    # @rpath/libogscore.2.dylib once it is copied. (On Linux the cc-wrapper's
+    # -rpath $out/lib hides this.) Give it the installed library dir.
+    install_name_tool -add_rpath "$out/lib" "$out/bin/${name}"
   '';
 
   meta = (old.meta or { }) // {

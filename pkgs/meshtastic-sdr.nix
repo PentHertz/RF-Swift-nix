@@ -10,7 +10,9 @@
 
 let
   gr = gnuradio.unwrapped;
-  py = gr.python.withPackages (ps: with ps; [ meshtastic cryptography pyzmq ]);
+  # numpy: GNU Radio's pmt (imported by the TX script) needs it, and gr's
+  # site-packages are added below without their own Python dependencies.
+  py = gr.python.withPackages (ps: with ps; [ meshtastic cryptography pyzmq numpy ]);
 in
 stdenvNoCC.mkDerivation {
   pname = "meshtastic-sdr";

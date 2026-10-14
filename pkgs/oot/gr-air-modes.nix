@@ -15,6 +15,14 @@ gnuradioPackages.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat python3Packages.numpy ];
+  # Python modules its apps and air_modes package import at run time:
+  # propagated so a GNU Radio wrapper bundling the module adds them.
+  propagatedBuildInputs = with python3Packages; [ pyzmq scipy ];
+  # numpy 2 removed the numpy.float alias (the builtin float is the same dtype);
+  # without this, importing air_modes (so modes_rx) fails.
+  postPatch = ''
+    substituteInPlace python/mlat.py --replace-fail "dtype=numpy.float)" "dtype=float)"
+  '';
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
 
   meta = {

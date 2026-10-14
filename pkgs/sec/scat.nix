@@ -14,7 +14,7 @@ python3Packages.buildPythonApplication {
   };
 
   build-system = [ python3Packages.hatchling ];
-  propagatedBuildInputs = with python3Packages; [ pyusb pyserial bitstring ];
+  propagatedBuildInputs = with python3Packages; [ pyusb pyserial bitstring packaging ];
   doCheck = false;
 
   meta = {

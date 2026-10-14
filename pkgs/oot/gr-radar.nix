@@ -15,6 +15,9 @@ gnuradioPackages.mkDerivation {
   nativeBuildInputs = [ cmake pkg-config git python3Packages.pybind11 libsForQt5.wrapQtAppsHook ];
   dontWrapQtApps = true;
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat python3Packages.numpy libsForQt5.qtbase libsForQt5.qwt uhd fftwFloat python3Packages.pyqt5 ];
+  # Python modules its blocks import at run time: propagated so a GNU Radio
+  # wrapper bundling the module adds them to its Python environment.
+  propagatedBuildInputs = [ python3Packages.pyqt5 ];
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
   env.NIX_CFLAGS_COMPILE = "-Wno-error -Wno-deprecated-declarations -Wno-narrowing -fpermissive";
 

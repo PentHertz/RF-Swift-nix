@@ -12,7 +12,7 @@
 , gr-zwave_poore, gr-mixalot, gr-reveng, gr-j2497, gr-m17
 , gr-grnet, gr-aoa, gr-correctiq, gr-dsd, gr-nrsc5, gr-ntsc-rc, gr-mer, gr-flarm
 , gr-guiextra, gr-rftap, gr-radio_astro, gr-cessb, gr-hydrasdr, gr-bladeRF, gr-funcube
-, gr-htra, gr-signal-hound }:
+, gr-htra, gr-signal-hound, gnuradio-hier-blocks, gnuradioBundle }:
 
 let
   # The full OOT bundle. Some modules are Linux-only in nixpkgs (e.g. gr-difi);
@@ -49,10 +49,26 @@ let
   availableForHost = p:
     let ok = builtins.tryEval (lib.meta.availableOn stdenv.hostPlatform p);
     in ok.success && ok.value;
+  # Plus the precompiled hierarchical blocks their examples are built on.
+  extraPackages = builtins.filter availableForHost wanted
+    ++ lib.optional (gnuradio-hier-blocks.blockCount > 0) gnuradio-hier-blocks;
 in
 (gnuradio.override {
-  extraPackages = builtins.filter availableForHost wanted;
+  inherit extraPackages;
+  # The Qt interface (gnuradio-companion --qt, the one with the example
+  # browser) imports qtpy, which nixpkgs' wrapper does not add.
+  extraPythonPackages = [ gnuradio.unwrapped.python.pkgs.qtpy ];
+  # GRC's example browser (gnuradio-companion --qt) reads a single
+  # examples_path: point it at this bundle's, where buildCommand below adds
+  # every module's examples to GNU Radio's own. --set-default keeps a value the
+  # user sets themselves.
+  extraMakeWrapperArgs = [
+    "--set-default" "GR_CONF_GRC_EXAMPLES_PATH" "${placeholder "out"}/share/gnuradio/examples"
+  ];
 }).overrideAttrs (old: {
+  buildCommand = old.buildCommand
+    + gnuradioBundle.linkExamples extraPackages
+    + gnuradioBundle.fixQtLocale;
   # nixpkgs currently selects `gnuradio-config-info`, which is useful for
   # diagnostics but is not the command users expect to launch in a lazy RF
   # Swift environment. This entry point also realizes the complete OOT bundle.

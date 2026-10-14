@@ -30,7 +30,9 @@ stdenvNoCC.mkDerivation {
     install -Dm644 targetedKerberoast.py $out/share/targetedkerberoast/targetedKerberoast.py
     makeWrapper ${pyEnv}/bin/python3 $out/bin/targetedKerberoast \
       --add-flags "$out/share/targetedkerberoast/targetedKerberoast.py"
-    ln -s targetedKerberoast $out/bin/targetedkerberoast
+    # Lowercase alias. On a case-insensitive filesystem (macOS's default APFS)
+    # the name already resolves to the wrapper and `ln` would fail on it.
+    [ -e $out/bin/targetedkerberoast ] || ln -s targetedKerberoast $out/bin/targetedkerberoast
     runHook postInstall
   '';
 

@@ -14,6 +14,13 @@ gnuradioPackages.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat python3Packages.numpy turbofec ];
+  # Python modules its blocks import at run time: propagated so a GNU Radio
+  # wrapper bundling the module adds them to its Python environment.
+  propagatedBuildInputs = [ python3Packages.pytz ];
+  # numpy 2 removed ndarray.tostring(); tobytes() is the same call.
+  postPatch = ''
+    substituteInPlace python/flarm/packetize.py --replace-fail ".tostring()" ".tobytes()"
+  '';
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
   env.NIX_CFLAGS_COMPILE = "-Wno-error -Wno-deprecated-declarations -Wno-narrowing -fpermissive";
 

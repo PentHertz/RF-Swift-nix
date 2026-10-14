@@ -1,12 +1,20 @@
 # ChameleonUltra host CLI (RfidResearchGroup): the Python client that drives the
-# Chameleon Ultra/Lite RFID emulator over serial. The optional C key-recovery
-# helpers (software/src) are not built here because their CMake FetchContent-pulls
-# xz from the network, which the sandbox blocks; the CLI's card read/write/emulate
-# features work without them.
-{ lib, python3Packages, fetchFromGitHub, makeWrapper }:
+# Chameleon Ultra/Lite RFID emulator over serial, with the C key-recovery
+# helpers (software/src: nested, staticnested*, darkside, mfkey*, hardnested)
+# its Mifare attack commands run.
+{ lib, python3Packages, fetchFromGitHub, makeWrapper, cmake, openssl }:
 
 let
   pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or null) names);
+  # software/src FetchContent-pulls xz (liblzma, for hardnested's compressed
+  # tables) from GitHub; the build sandbox has no network, so hand CMake the
+  # same tag as a pre-fetched source.
+  xzSrc = fetchFromGitHub {
+    owner = "tukaani-project";
+    repo = "xz";
+    tag = "v5.8.1";
+    hash = "sha256-vGUNoX5VTM0aQ5GmBPXip97WGN9vaVrQLE9msToZyKs=";
+  };
 in
 python3Packages.buildPythonApplication {
   pname = "chameleon-ultra-cli";
@@ -20,10 +28,23 @@ python3Packages.buildPythonApplication {
     hash = "sha256-wUkw6uM+XPRgODRElJmSZM3AbD0X2balRgEVrn5V6V8=";
   };
 
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [ makeWrapper cmake ];
+  # mfulc_des_brute (Ultralight-C DES brute force) links libcrypto.
+  buildInputs = [ openssl ];
   propagatedBuildInputs = pick [ "pyserial" "colorama" "prompt-toolkit" ];
-  dontBuild = true;
+  dontUseCmakeConfigure = true;
   doCheck = false;
+
+  # The CLI looks for the helpers in bin/ next to its scripts, which is where
+  # this CMake project writes them (EXECUTABLE_OUTPUT_PATH = ../script/bin), so
+  # installPhase's copy of software/script picks them up.
+  buildPhase = ''
+    runHook preBuild
+    cmake -S software/src -B build-tools -DCMAKE_BUILD_TYPE=Release \
+      -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DFETCHCONTENT_SOURCE_DIR_XZ=${xzSrc}
+    cmake --build build-tools -j$NIX_BUILD_CORES
+    runHook postBuild
+  '';
 
   installPhase = ''
     runHook preInstall

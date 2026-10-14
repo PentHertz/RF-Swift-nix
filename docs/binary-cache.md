@@ -108,8 +108,8 @@ nix build github:PentHertz/RF-Swift-nix#network --dry-run
 Everything should be listed under "will be fetched"; anything under "will be
 built" is either not cached for your architecture yet or newer than the last
 CI run. Cached architectures are `x86_64-linux`, `aarch64-linux`,
-`riscv64-linux` and `aarch64-darwin` (Apple Silicon). Intel macOS builds from
-source.
+`riscv64-linux` and `aarch64-darwin` (Apple Silicon). Intel Macs
+(`x86_64-darwin`) are not supported: nixpkgs no longer builds for them.
 
 ## Troubleshooting
 

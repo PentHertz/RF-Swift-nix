@@ -15,6 +15,13 @@ python3Packages.buildPythonApplication {
     hash = "sha256-s2ZPL57Oz1Lt1JmJqlsmWzDWmws6/5NEduGkcftcTOU=";
   };
 
+  # pyproject.toml only lists packages (packages.find), so the wheel misses the
+  # top-level hexhttp.py and cli.py its own entry point imports
+  # (`from hexhttp import cli_main`): declare them as py-modules.
+  postPatch = ''
+    printf '\n[tool.setuptools]\npy-modules = ["hexhttp", "cli"]\n' >> pyproject.toml
+  '';
+
   build-system = [ python3Packages.setuptools ];
   dependencies = with python3Packages; [
     requests urllib3 beautifulsoup4 httpx tldextract curl-cffi

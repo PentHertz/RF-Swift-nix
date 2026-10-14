@@ -10,7 +10,9 @@ in python3Packages.buildPythonApplication {
     substituteInPlace pyproject.toml --replace-fail 'bloodyad = "bloodyAD.main:main"' ""
   '';
   build-system = pick [ "hatchling" ];
-  dependencies = pick [ "impacket" "ldap3" "gssapi" "dnspython" "pyasn1" "cryptography" "asn1crypto" "minikerberos" "winacl" ];
+  # badldap + kerbad replaced msldap/minikerberos upstream (pyproject.toml);
+  # dontCheckRuntimeDeps below hid their absence, so list them explicitly.
+  dependencies = pick [ "impacket" "ldap3" "gssapi" "dnspython" "pyasn1" "cryptography" "asn1crypto" "minikerberos" "winacl" "badldap" "kerbad" ];
   pythonRelaxDeps = true; dontCheckRuntimeDeps = true; doCheck = false;
   meta = { description = "AD privilege escalation swiss army knife"; homepage = "https://github.com/CravateRouge/bloodyAD"; license = lib.licenses.mit; mainProgram = "bloodyAD"; };
 }

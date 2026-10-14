@@ -29,7 +29,7 @@ let
         sed -i '/add_subdirectory(test)/d;/add_subdirectory(bindings)/d;/enable_testing/d' CMakeLists.txt
       '';
       cmakeFlags = (o.cmakeFlags or [ ]) ++ [ "-DOSX_PACKAGE=OFF" "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
-      meta = (o.meta or { }) // { platforms = (o.meta.platforms or [ ]) ++ [ "aarch64-darwin" "x86_64-darwin" ]; };
+      meta = (o.meta or { }) // { platforms = (o.meta.platforms or [ ]) ++ [ "aarch64-darwin" ]; };
     });
 
   # A vendor library counts only where nixpkgs' platform metadata says it

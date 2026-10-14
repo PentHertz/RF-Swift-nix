@@ -35,17 +35,19 @@ stdenv.mkDerivation {
 
   dontBuild = true;
 
+  # Upstream has no install target (the only Makefile is embed/'s, for the
+  # optional C library): LuaRadio is the `radio` Lua tree plus the `luaradio`
+  # launcher, which `require`s the tree through LuaJIT's package.path. Install
+  # the tree in the standard Lua layout and put it on LUA_PATH; the trailing
+  # ";;" keeps LuaJIT's default path (its own jit.* modules) after it.
   installPhase = ''
     runHook preInstall
-    make install PREFIX=$out LUAJIT=${luajit}/bin/luajit || {
-      mkdir -p $out/bin $out/share/luaradio
-      cp -r radio $out/share/luaradio/ 2>/dev/null || true
-      install -Dm755 luaradio $out/bin/luaradio 2>/dev/null || true
-    }
-    if [ -e $out/bin/luaradio ]; then
-      wrapProgram $out/bin/luaradio \
-        --prefix ${ldVar} : "${libraryPath}"
-    fi
+    mkdir -p $out/share/lua/5.1
+    cp -r radio $out/share/lua/5.1/
+    install -Dm755 luaradio $out/bin/luaradio
+    wrapProgram $out/bin/luaradio \
+      --run 'export LUA_PATH="'"$out"'/share/lua/5.1/?.lua;'"$out"'/share/lua/5.1/?/init.lua;''${LUA_PATH:-;}"' \
+      --prefix ${ldVar} : "${libraryPath}"
     runHook postInstall
   '';
 

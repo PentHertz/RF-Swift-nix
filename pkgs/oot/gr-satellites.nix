@@ -16,6 +16,9 @@ gnuradioPackages.mkDerivation {
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];
   buildInputs = [ boost spdlog gmp log4cpp volk fftwFloat ]
     ++ (with python3Packages; [ numpy construct requests pyyaml ]);
+  # Python modules its blocks import at run time: propagated so a GNU Radio
+  # wrapper bundling the module adds them to its Python environment.
+  propagatedBuildInputs = with python3Packages; [ construct requests pyyaml websocket-client ];
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
 
   meta = {

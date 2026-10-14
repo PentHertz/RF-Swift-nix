@@ -81,6 +81,25 @@ realizes the `gnuradio-rfswift` closure, which already contains all RF Swift OOT
 modules; they are not fetched separately from inside GRC. The initial launch can
 therefore be substantial, while later launches reuse the same Nix store closure.
 
+### GNU Radio OOT examples and apps
+
+Each bundled OOT module installs its example flowgraphs (`examples/`) and
+helper apps (`apps/`) where GNU Radio keeps its own, under
+`share/gnuradio/examples/<module>`. In an environment created eagerly that is
+`~/.rfswift/nix/environments/<name>/profile/share/gnuradio/examples/<module>`
+(`/rftools/sdr/...` in the Docker images). GRC's example browser lists them
+all: start `gnuradio-companion --qt` and open **File → Examples...** (the
+default GTK interface has no example browser). The store is read-only, so copy
+a flowgraph somewhere writable (your workspace) before editing it.
+
+Example flowgraphs that are built on a module's hierarchical blocks (the
+802.11, HaLow and 802.15.4 PHYs, gr-tempest, gr-gfdm, gr-ais, gr-flarm,
+gr-funcube) open directly: `gnuradio-hier-blocks` compiles those blocks at
+build time, so you do not have to open and generate each `*_hier.grc` first.
+The exception is gr-gfdm's `hier_gfdm_fastsync`, which does not compile
+upstream (unconnected ports), so `gfdm_fast_sync_demo` and `gfdm_ota_demo`
+do not open.
+
 ## Eager vs on-demand, and the binary cache
 
 Creating an environment eagerly builds its whole tool closure once; `--lazy` builds each tool the first time it is called. Either way, "build" is mostly "download a prebuilt binary from a cache", not "compile". Standard nixpkgs tools come prebuilt from `cache.nixos.org`; only tools not in a cache compile locally, which here is the handful of derivations in `pkgs/`. The architecture-specific cache workflows build the environments and push them to the PentHertz binary cache, so once your machine is pointed at it, even those download prebuilt. Client setup (token, `nix.conf`, verification) is in [`docs/binary-cache.md`](docs/binary-cache.md); the CI side is in [`docs/ci-cd.md`](docs/ci-cd.md).
@@ -117,6 +136,30 @@ Run `rfswift nix catalog` or `nix eval .#catalog` for the live list. At a glance
 | `osint`     | theHarvester, sherlock, recon-ng, subfinder, exiftool |
 | `android`   | adb/fastboot, apktool, frida, androguard, scrcpy, jadx |
 | `ad`        | impacket, NetExec, kerbrute, Samba/LDAP/Kerberos clients |
+
+### Known gaps
+
+- **John the Ripper helpers (`network`, `wifi`).** `john` and most `*2john`
+  extractors work, but a few helpers need modules nixpkgs does not ship:
+  `radius2john.pl` (Perl `Net::Pcap`), `lion2john-alt.pl` (Perl `Data::Plist`)
+  and `pse2john.py` (Python `pysap`). `network2john.lua` is a Wireshark plugin,
+  not a command: `tshark -q -X lua_script:network2john.lua -r capture.pcap`.
+  For the complete helper set, use the Docker `network` image, which builds
+  John the Ripper jumbo from source: `rfswift create -n jtr -i network`.
+- **macOS.** Apple Silicon (`aarch64-darwin`) only: nixpkgs dropped Intel
+  Macs. Every environment builds there, and so do all GNU Radio OOT modules
+  but three, which `sdr_full` on a Mac ships without: gr-gsm (libosmocore is
+  Linux-only in nixpkgs), gr-aaronia_rtsa (Linux-only vendor SDK) and gr-dvbs2
+  (needs `linux/if_tun.h`).
+- **GNU Radio OOT leftovers (`sdr_full`).** gr-uaslink's GRC block files
+  are still in GNU Radio 3.7's format, which GRC 3.10 does not load, so its
+  blocks work from Python but do not appear in gnuradio-companion.
+  gr-air-modes' `modes_gui` needs PyQt4 and PyQt-Qwt, which nixpkgs does not
+  ship; `modes_rx` works.
+- **Electron apps under `rfswift --isolate`.** Chromium's own sandbox cannot
+  start inside the isolation jail, so the Caido and Saleae Logic 2 wrappers
+  add `--no-sandbox` when `RFSWIFT_ISOLATED` is set (the jail is then the
+  sandbox). Outside a jail they run with Chromium's sandbox as usual.
 
 ## Adding or changing an environment
 

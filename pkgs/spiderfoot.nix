@@ -3,11 +3,26 @@
 
 let
   pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or null) names);
-  deps = pick [
+  # Ad/tracker-list matcher behind modules/sfp_adblock.py. Not in nixpkgs, and
+  # sf imports every module at startup, so without it nothing runs.
+  adblockparser = python3Packages.buildPythonPackage rec {
+    pname = "adblockparser";
+    version = "0.7";
+    pyproject = true;
+    src = python3Packages.fetchPypi { inherit pname version; hash = "sha256-ejQH3cMaKeQnMrvLBPNnfGlZv/oeqdcSr9SY4LTQmyI="; };
+    build-system = [ python3Packages.setuptools ];
+    doCheck = false;
+    pythonImportsCheck = [ "adblockparser" ];
+    meta.license = lib.licenses.mit;
+  };
+  deps = [ adblockparser ] ++ pick [
     "requests" "lxml" "netaddr" "dnspython" "beautifulsoup4" "cherrypy"
     "cherrypy-cors" "mako" "pypdf" "openpyxl" "python-docx" "python-pptx"
     "exifread" "phonenumbers" "pysocks" "secure" "networkx" "adblockparser"
     "cryptography" "publicsuffixlist" "pyyaml" "python-whois"
+    # requirements.txt modules the code imports (OpenSSL in sflib, ipwhois in
+    # modules); without them `sf` dies at startup. PyPDF2 is replaced, below.
+    "pyopenssl" "ipwhois"
   ];
 in
 python3Packages.buildPythonApplication {
@@ -26,6 +41,15 @@ python3Packages.buildPythonApplication {
   propagatedBuildInputs = deps;
   dontCheckRuntimeDeps = true;
   doCheck = false;
+
+  # sfp_filemeta reads PDF metadata with PyPDF2, which nixpkgs marks insecure
+  # (deprecated in favour of pypdf, already in deps). Same calls in pypdf.
+  postPatch = ''
+    substituteInPlace modules/sfp_filemeta.py \
+      --replace-fail "import PyPDF2" "import pypdf as PyPDF2" \
+      --replace-fail "PyPDF2.PdfFileReader(raw, strict=False)" "PyPDF2.PdfReader(raw, strict=False)" \
+      --replace-fail "pdf.getDocumentInfo()" "pdf.metadata"
+  '';
 
   installPhase = ''
     runHook preInstall
