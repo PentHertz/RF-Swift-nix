@@ -26,6 +26,13 @@ Changed:
   which no longer applied; meson also comes from the binary cache again. An
   assertion fails evaluation with a clear message should a pin ever ship an
   older meson.
+- `satdump` builds again on aarch64-linux. GCC 16.2 (new with the nixpkgs
+  bump) segfaults there while printing a `-Wpsabi` note ("parameter passing
+  for argument of type 'std::pair<double, double>' ... changed in GCC 10.1")
+  inside nlohmann/json's templates, an internal compiler error that failed
+  sdr_full. The note is informational, so it is now silenced with
+  `-Wno-psabi`, for GCC on aarch64 only (other platforms keep the identical
+  derivation). Reproduced and verified with the x86_64->aarch64 cross GCC.
 - `python3Packages.meshtastic` skips its test suite on every platform, not only
   macOS. Its test inputs are all its optional extras, which on Linux pulled
   pandas-stubs -> tables -> blosc2 -> torch and the GDAL/geopandas/xarray stack

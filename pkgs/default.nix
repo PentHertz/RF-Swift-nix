@@ -387,6 +387,16 @@ RULES
     # not produce it. Enable it explicitly so the Soapy-only devices in
     # soapysdr-with-plugins are reachable; limesdr/usrp plugins are ON already.
     cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DPLUGIN_SOAPY_SDR_SUPPORT=ON" ];
+    # GCC 16.2 on aarch64 segfaults (internal compiler error in
+    # print_instantiation_partial_context_line) while printing the -Wpsabi
+    # note "parameter passing for argument of type 'std::pair<double, double>'
+    # ... changed in GCC 10.1" inside nlohmann/json's template instantiations
+    # (src-core/angelscript/scriptsatdump/bind_image_product.cpp). The note is
+    # informational only (an ABI change from 2020, moot when everything is
+    # built with one compiler); silencing it avoids the crash. Reproduced and
+    # verified with the x86_64->aarch64 cross GCC 16.2. Only GCC on aarch64
+    # gets the flag (see the `//` below), so every other platform keeps the
+    # exact derivation it already has cached.
     # Fail the build, not the user's session, if one of the extra plugins
     # silently stops being configured.
     doInstallCheck = true;
@@ -398,6 +408,10 @@ RULES
       done
       runHook postInstallCheck
     '';
+  } // lib.optionalAttrs (stdenv.hostPlatform.isAarch64 && stdenv.cc.isGNU) {
+    env = (old.env or { }) // {
+      NIX_CFLAGS_COMPILE = toString [ (old.env.NIX_CFLAGS_COMPILE or "") "-Wno-psabi" ];
+    };
   });
   hydrasdr433 = callPackage ./hydrasdr433.nix { inherit libhydrasdr; };
   kalibrate-hydrasdr = callPackage ./kalibrate-hydrasdr.nix { inherit libhydrasdr; };
