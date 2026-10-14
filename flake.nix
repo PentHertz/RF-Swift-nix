@@ -46,16 +46,6 @@
               crccheck = pyprev.crccheck.overrideAttrs (o: {
                 meta = (o.meta or { }) // { platforms = prev.lib.platforms.unix; };
               });
-              # meshtastic's runtime deps are all cross-platform (it declares
-              # aarch64-darwin itself), but its test inputs pull pytap2, a
-              # Linux-only TUN/TAP binding. Merely evaluating that throws
-              # "not available on the requested hostPlatform", which takes the
-              # whole sdr_full environment down on macOS. Skip the tests there.
-              meshtastic = pyprev.meshtastic.overridePythonAttrs (o: {
-                doCheck = false;
-                nativeCheckInputs = [ ];
-                checkInputs = [ ];
-              });
               # cantools' check phase dies with SIGTRAP (exit 133) on
               # aarch64-darwin: tests/test_plot_without_mock.py imports
               # matplotlib.pyplot and renders a PDF, and matplotlib's default
@@ -376,6 +366,19 @@
             # so pytest reports XPASS(strict). It is a test-only dep of
             # tldextract, which hexhttp (network) pulls in; skip its checks.
             syrupy = pyprev.syrupy.overridePythonAttrs (_: { doCheck = false; });
+            # meshtastic's runtime deps are small and cross-platform, but its
+            # test inputs are every optional extra plus pytap2. On Linux that
+            # drags pandas-stubs -> tables -> blosc2 -> torch (blosc2's own
+            # test dep) into sdr_full's build: a from-source PyTorch whenever
+            # the dev cache lacks it, as after a nixpkgs bump, which a CI
+            # runner cannot finish. On macOS pytap2 is Linux-only and merely
+            # evaluating it throws. None of it reaches the environment, so skip
+            # the tests everywhere (the import check still runs).
+            meshtastic = pyprev.meshtastic.overridePythonAttrs (_: {
+              doCheck = false;
+              nativeCheckInputs = [ ];
+              checkInputs = [ ];
+            });
           }
           # httpx2/httpcore2 are the httpx 2.x pre-release attrs; guard with
           # optionalAttrs so a later pin that renames or drops them still evals.

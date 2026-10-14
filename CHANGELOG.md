@@ -20,6 +20,20 @@ Changed:
   0.12.24, not yet in nixpkgs). Every environment and `pkg-*` still evaluates
   on x86_64/aarch64/riscv64 Linux and aarch64-darwin; the bump drops no
   package and restores apksigner and luaradio-hydrasdr on riscv64.
+- `cyberether` builds with nixpkgs' meson (1.12.1 on this pin, CyberEther needs
+  >= 1.11) instead of overriding it to 1.11.0. The override swapped only the
+  source, so it kept nixpkgs' patches, which nixpkgs had rebased onto 1.12 and
+  which no longer applied; meson also comes from the binary cache again. An
+  assertion fails evaluation with a clear message should a pin ever ship an
+  older meson.
+- `python3Packages.meshtastic` skips its test suite on every platform, not only
+  macOS. Its test inputs are all its optional extras, which on Linux pulled
+  pandas-stubs -> tables -> blosc2 -> torch and the GDAL/geopandas/xarray stack
+  into sdr_full's build (49 derivations, a from-source PyTorch among them,
+  whenever the dev cache lacks them, as right after a nixpkgs bump). None of it
+  reaches the environment; the import check still runs. It also brings the
+  meshtastic CLI back to sdr_full on riscv64, where those test inputs did not
+  evaluate.
 - Signal Hound SDK 08_26_26 -> 09_14_26, Spike 4.0.16 -> 4.0.17 and VSG60
   2.0.3 -> 2.0.5. Signal Hound renamed the Spike/VSG archives to
   `(Ubuntu_x64)`, so their version probes and platform paths follow; the VSG
