@@ -8,6 +8,73 @@ Keep a Changelog (https://keepachangelog.com). Dates are ISO-8601.
 First development line of the RF Swift Nix engine flake, tracking the RF Swift
 binary's v4.0.0-dev.
 
+### Synced with RF-Swift-images v1.1.3
+
+Everything RF-Swift-images added or bumped between v1.1.2 and v1.1.3.
+
+Changed:
+
+- `cyberether` 1.9.1 -> 1.15.0 (the images' v1.15.0). Upstream replaced its
+  bundled SoapySDR stack with built-in drivers (the SDR and SDR Sweep blocks)
+  for RTL-SDR, Airspy, Airspy HF+, HackRF, LimeSDR, bladeRF and PlutoSDR, which
+  it links from ~10 new vendored subprojects. As the Soapy stack was, they are
+  routed to nixpkgs, which carries the very releases the wraps pin (bladeRF
+  2025.10, hackrf 2026.01.3, LimeSuite 23.11.0, libiio 0.26, libad9361 0.3;
+  airspyhf is newer, 1.8.1), so no LimeSuite, bladeRF/no-OS, libiio or libxml2
+  is compiled. The remaining SoapySDR block now dlopens libSoapySDR at
+  runtime: the wrapper points `CYBERETHER_SOAPYSDR_LIBRARY` at RF Swift's
+  `soapysdr-with-plugins`, and its ABI check also accepts nixpkgs' snapshot
+  ("0.8-3"; the bumps since "0.8" only added C++ API). The wrap list follows
+  1.15.0 (cpp-httplib 0.56.0, toml++ 3.4.0, four more tree-sitter grammars)
+  and the geodata grows to 26 files, 8 of them fetched from natural-earth-
+  vector v5.1.2 as upstream's parser does. As in the images, only CyberEther
+  and fmt are installed: the statically linked subprojects' headers, archives
+  and .pc files (zlib, qrencode, tree-sitter, cpp-httplib) no longer land in
+  the environment.
+- `wifite2` moves to kimocoder's master (2.9.9-beta, 2026-10-10), which the
+  images now install instead of derv82's frozen original. nixpkgs' recipe
+  (2.7.0) is kept and its source moved forward: poetry-core build, requests
+  and rich added, and hostapd, dnsmasq, wpa_supplicant, ip and iptables for
+  the evil-twin attack on the wrapper's PATH. The bundled wordlist is
+  installed and added to wifite's default search list (the images copy it to
+  /usr/local/share/dict/wordlists), and so is the OUI table. John cracking
+  chose `wpapsk-opencl` whenever john lists it, which nixpkgs' OpenCL-enabled
+  john always does, and then cracked nothing without an OpenCL device (most
+  non-NixOS hosts); it now takes that format only when `john
+  --list=opencl-devices` shows a device. Three upstream tests are disabled: the
+  aircrack-ng handshake check Debian also disables, a john banner regex, and a
+  john round trip whose key is shorter than WPA's 8-character minimum.
+- Signal Hound SDK 09_14_26 -> 10_05_26 (PCR API 1.0.10). On x86_64 the SDK is
+  now unpacked from its Ubuntu builds only: every distribution's copy carries
+  the same file name, so the one installed had depended on find's traversal
+  order. TG ships Ubuntu 14.04 (1.1.0) and 24.04 (1.1.3) builds; the 24.04 one
+  is installed, as in the images.
+- `burpsuite` 2026.9.1 -> 2026.9.2 and `saleae-logic2` 2.4.46 -> 2.4.48.
+
+Added:
+
+- `wifit3` (wifi): derv82's standalone USB Wi-Fi auditor TUI, which drives
+  Atheros, MediaTek, Realtek and Ralink dongles through its own user-space
+  drivers (PyUSB, firmware bundled). Pinned to master, as the images install
+  it; built with its test suite and upstream's `--smoke` self-test. nixpkgs
+  builds libusb-package from source, so unlike the images (x86_64/aarch64
+  wheels only) it also covers riscv64 and macOS.
+- `cyberether-release` and the `cyberether_release` environment: CyberEther
+  1.15.0 from upstream's prebuilt release tarballs, for x86_64 and aarch64
+  Linux and aarch64 macOS. Nothing compiles, where the source build is a
+  long serial C++ build. On Linux autoPatchelf ties it to nixpkgs' glibc, Vulkan loader, udev
+  and libgudev, and what libjetstream dlopens (GLFW's X11/Wayland backends,
+  miniaudio's ALSA/PulseAudio/JACK, libsecret) is on its RUNPATH. Its SoapySDR
+  block accepts only SoapySDR 0.8.1's ABI, so that block finds no library here;
+  the built-in SDR drivers are unaffected.
+
+Not carried over:
+
+- uv 0.13.1: the nixpkgs pin has 0.12.22 and nixos-unstable 0.13.0; it comes
+  with the next nixpkgs move.
+- SavvyCAN's Qt6 patch: the images build master, nixpkgs ships the V220
+  release (Qt5), which needs neither change.
+
 ### Synced with RF-Swift-images v1.1.2
 
 Everything RF-Swift-images added or bumped between v1.1.1 and v1.1.2.

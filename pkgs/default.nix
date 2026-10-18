@@ -95,7 +95,9 @@ with pkgs;
   libhydrasdr = callPackage ./libhydrasdr.nix { };
 
   ## --- SDR utilities (source builds) ------------------------------------
-  cyberether = callPackage ./cyberether { };
+  cyberether = callPackage ./cyberether { inherit soapysdr-with-plugins; };
+  # Upstream's prebuilt release binaries: no compile, and aarch64 Linux/macOS.
+  cyberether-release = callPackage ./cyberether/release.nix { };
   retrogram-soapysdr = callPackage ./retrogram-soapysdr.nix { };
   gqrx-scanner = callPackage ./gqrx-scanner.nix { };
   osmo-fl2k = callPackage ./osmo-fl2k.nix { };
@@ -640,6 +642,10 @@ RULES
   hostapd-wpe = callPackage ./sec/hostapd-wpe.nix { };
   wpa-sycophant = callPackage ./sec/wpa-sycophant.nix { };
   eap-buster = callPackage ./sec/eap-buster.nix { };
+  # kimocoder's master, as the images install it (nixpkgs has the 2.7.0 release).
+  wifite2 = callPackage ./sec/wifite2.nix { };
+  # USB Wi-Fi auditor with its own user-space drivers (wifi/wifi_basic images).
+  wifit3 = callPackage ./sec/wifit3.nix { };
 
   ## --- OSINT / recon extra (source Python) -----------------------------
   toutatis = callPackage ./sec/toutatis.nix { };

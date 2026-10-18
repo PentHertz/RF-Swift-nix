@@ -9,11 +9,11 @@
 
 let
   pname = "saleae-logic2";
-  version = "2.4.46";
+  version = "2.4.48";
 
   linuxSrc = fetchurl {
     url = "https://downloads2.saleae.com/logic2/Logic-${version}-linux-x64.AppImage";
-    hash = "sha256-goMu0NMWZwHX9PffV6YgtyGiOIPgz+jy6OlaLmcg1vI=";
+    hash = "sha256-28Le1jtI11Ydni5cnx4rr9x/VlTucUrRI8ad90hjZBs=";
   };
   appimageContents = appimageTools.extractType2 {
     inherit pname version;
@@ -43,7 +43,7 @@ RULES
     inherit pname version;
     src = fetchurl {
       url = "https://downloads2.saleae.com/logic2/Logic-${version}-macos-arm64.zip";
-      hash = "sha256-lC0aSPHTdzRfvAaowA6JLkqMWWWcYupCqUFHHqO32Us=";
+      hash = "sha256-3Awlx3JtgMg2P5W4kkAUYlYzJrUOyMFSM0kXcdkagtI=";
     };
     nativeBuildInputs = [ unzip makeWrapper ];
     # The zip's top-level entry is the .app itself, so unpack into a dir.

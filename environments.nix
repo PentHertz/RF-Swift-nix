@@ -347,6 +347,38 @@
     # on a RAM-constrained host, build it with limited parallelism so cc1plus is
     # not OOM-killed:  nix build .#pkg-cyberether --cores 2  (or --cores 1). It
     # then caches for the environment. Needs a few GB of build disk + RAM.
+    # cyberether_release below ships upstream's prebuilt binary instead.
+    missing = [ ];
+  };
+
+  ######################################################################
+  # CyberEther, upstream release binary (no compile; Linux and macOS)
+  ######################################################################
+  cyberether_release = {
+    description = "CyberEther from upstream's prebuilt release (no compilation, also on aarch64 Linux and macOS), with the SoapySDR device stack.";
+    category = "SDR";
+    prerequisites = [
+      "soapysdr-with-plugins"
+      "rfswift-udev-rules"
+      "hackrf"
+      "rtl-sdr-osmocom"
+      "airspy"
+      "limesuite"
+      "uhd"
+    ];
+    packages = [
+      # Runtime SDR device support (SoapySDR modules + device tools). The
+      # release binary drives RTL-SDR, Airspy/HF+, HackRF, LimeSDR, bladeRF and
+      # PlutoSDR with its own built-in drivers.
+      "rfswift-udev-rules"
+      "soapysdr-with-plugins"
+      "hackrf"
+      "rtl-sdr-osmocom"
+      "airspy"
+      "limesuite"
+      "uhd"
+      "cyberether-release"
+    ];
     missing = [ ];
   };
 
@@ -443,6 +475,9 @@
       "hostapd-wpe"
       "wpa-sycophant"
       "eap-buster"
+      # Standalone USB Wi-Fi auditor (TUI) with its own user-space drivers for
+      # common Atheros/MediaTek/Realtek/Ralink dongles.
+      "wifit3"
     ];
     missing = [ ];
   };

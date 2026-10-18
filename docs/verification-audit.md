@@ -206,6 +206,33 @@ nixpkgs packages, and they still need a real `x86_64-linux` machine (see
 
 QEMU user-mode emulation is no way around this: Nix itself segfaults under it.
 
+## Evidence collected on 2026-10-18 (RF-Swift-images v1.1.3 sync)
+
+Same host and containers as 2026-10-13/14. Every derivation whose hash changed
+against `HEAD` in some environment's closure was built, by the same closure
+diff: 25 on aarch64-darwin, 34 on aarch64-linux, 59 on x86_64-linux (CyberEther
+1.15.0's sources and geodata, the Signal Hound SDK and what links it, Burp
+Suite, Logic 2, wifite2, wifit3 and the Textual/tree-sitter Python packages it
+pulls in, cyberether-release). All of them built; `tests/verify.sh` passes on
+aarch64-darwin and x86_64-linux, the embedded catalog check included.
+
+- `cyberether` 1.15.0 built from source on x86_64-linux (Rosetta) and, with
+  the platform check lifted, natively on aarch64-linux. libjetstream links
+  nixpkgs' librtlsdr, airspy, airspyhf, hackrf, LimeSuite, bladeRF, libad9361
+  and libiio; the install holds only the launcher, libjetstream and its
+  headers; `cyberether --version` runs.
+- `cyberether-release` built and ran (`--version`, `--help`) on all three
+  platforms. On Linux every library libjetstream dlopens resolves through its
+  RUNPATH; on macOS both Mach-O files keep valid signatures.
+- `wifit3` passes its suite (3749 tests) and `wifit3 --smoke` on all three.
+- `wifite2` passes its suite (627 tests, three upstream tests disabled with
+  reasons in the recipe). Its output carries the wordlist and OUI table, and
+  its wrapper's PATH has hostapd, dnsmasq, wpa_supplicant, iptables and ip.
+- Signal Hound SDK on x86_64: one library per API, TG 1.1.3 and PCR 1.0.10.
+
+Not exercised: CyberEther with a GPU and a radio (the containers have neither),
+Logic 2 and Burp Suite beyond building, wifit3 with a USB adapter.
+
 ## Defects found and fixed
 
 ### Qt GRC crashed at startup

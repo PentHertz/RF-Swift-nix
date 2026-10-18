@@ -1,12 +1,16 @@
 # CyberEther (luigifcruz) - heterogeneous SDR visualisation with a Vulkan/WebGPU
-# renderer. Its meson build vendors ~40 dependencies as subproject wraps and
-# downloads them (plus ~20 Natural Earth GeoJSON files) at build time, which the
+# renderer. Its meson build vendors ~45 dependencies as subproject wraps and
+# downloads them (plus ~26 Natural Earth GeoJSON files) at build time, which the
 # offline Nix sandbox forbids. We vendor every wrap SOURCE into meson's
 # packagecache (the sha256s are embedded in the .wrap files) and pre-fetch the
 # geodata, then build with --wrap-mode=nodownload. The heaviest optional
 # features (remote GStreamer streaming, ONNX inference) are disabled so their
-# giant subprojects (gstreamer-full, glib, onnxruntime) never build; openssl is
-# taken from nixpkgs rather than compiled from source.
+# giant subprojects (gstreamer-full, glib, onnxruntime) never build; openssl,
+# glfw and the SDR device libraries are taken from nixpkgs rather than compiled
+# from source.
+#
+# Upstream's prebuilt release binaries are packaged too, as cyberether-release
+# (./release.nix): no compilation, and it also covers aarch64 Linux and macOS.
 { lib
 , stdenv
 , fetchFromGitHub
@@ -22,7 +26,12 @@
 , vulkan-headers
 , vulkan-loader
 , openssl
-, xorg
+, libx11
+, libxrandr
+, libxinerama
+, libxcursor
+, libxi
+, libxext
 , xorgproto
 , libxcb
 , wayland
@@ -32,26 +41,43 @@
 , libGL
 , udev
 , glfw
-, soapysdr
+, makeWrapper
+, rtl-sdr-osmocom
+, airspy
+, airspyhf
+, hackrf
+, limesuite
+, libbladeRF
+, libad9361
+, libiio
+  # RF Swift's SoapySDR with every device module linked in (pkgs/default.nix);
+  # CyberEther's Soapy block dlopens it at runtime.
+, soapysdr-with-plugins
 }:
 
 let
   # --- Vendored meson subproject sources (name/url/sha256 from the .wrap files).
   wrapSrcs = [
     { name = "Catch2-3.4.0.tar.gz"; sha256 = "122928b814b75717316c71af69bd2b43387643ba076a6ec16e7882bfb2dfacbb"; url = "https://github.com/catchorg/Catch2/archive/v3.4.0.tar.gz"; }
-    { name = "cpp-httplib-0.40.0.tar.gz"; sha256 = "b52ecaebf0f94086c8b3305650412359d920c5267f6d9ce87f883198783af678"; url = "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.40.0.tar.gz"; }
+    { name = "cpp-httplib-0.56.0.tar.gz"; sha256 = "41f214d844e3b9117b734a8cc305b6141c5b47d63009681944e03bc31d92b9ca"; url = "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.56.0.tar.gz"; }
     { name = "fmt-11.2.0.tar.gz"; sha256 = "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af"; url = "https://github.com/fmtlib/fmt/archive/11.2.0.tar.gz"; }
     { name = "glfw-3.4.tar.gz"; sha256 = "c038d34200234d071fae9345bc455e4a8f2f544ab60150765d7704e08f3dac01"; url = "https://github.com/glfw/glfw/archive/refs/tags/3.4.tar.gz"; }
     { name = "glib-2.88.1.tar.xz"; sha256 = "51ab804c56f6eab3e5045c774d1290ac5e4c923d4f9a3d8e33123bee45c1840e"; url = "https://download.gnome.org/sources/glib/2.88/glib-2.88.1.tar.xz"; }
     { name = "glm-1.0.0.tar.gz"; sha256 = "e51f6c89ff33b7cfb19daafb215f293d106cd900f8d681b9b1295312ccadbd23"; url = "https://github.com/g-truc/glm/archive/refs/tags/1.0.0.tar.gz"; }
     { name = "gstreamer-1.28.2.tar.gz"; sha256 = "c221bcac5c954d8ac7a02d3ea34d5466058f073c43d48b7b317a7b0a78595ec3"; url = "https://gitlab.freedesktop.org/gstreamer/gstreamer/-/archive/1.28.2/gstreamer-1.28.2.tar.gz"; }
     { name = "airspyone_host-1.0.10.tar.gz"; sha256 = "fcca23911c9a9da71cebeffeba708c59d1d6401eec6eb2dd73cae35b8ea3c613"; url = "https://github.com/airspy/airspyone_host/archive/refs/tags/v1.0.10.tar.gz"; }
+    { name = "airspyhf-1.6.8.tar.gz"; sha256 = "cd1e5ae89e09b813b096ae4a328e352c9432a582e03fd7da86760ba60efa77ab"; url = "https://github.com/airspy/airspyhf/archive/refs/tags/1.6.8.tar.gz"; }
+    { name = "bladeRF-2025.10.tar.gz"; sha256 = "f7a63f7ad53cf3478dc60cc476b377020a7c256ef37640b1a4fa715cd9784b23"; url = "https://github.com/Nuand/bladeRF/archive/refs/tags/2025.10.tar.gz"; }
+    { name = "no-OS-0bba46e6f6f75785a65d425ece37d0a04daf6157.tar.gz"; sha256 = "b77a86780e82ff592dd3cbcbf916d6f421f5cb7b523b800255483b1992aea88d"; url = "https://github.com/analogdevicesinc/no-OS/archive/0bba46e6f6f75785a65d425ece37d0a04daf6157.tar.gz"; }
     { name = "libffi-3.5.2.tar.gz"; sha256 = "f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc"; url = "https://github.com/libffi/libffi/releases/download/v3.5.2/libffi-3.5.2.tar.gz"; }
     { name = "libgudev-237.tar.bz2"; sha256 = "1cec460f8afaa0e613f92202699b31b5560843a4a86e019ebb1ef437675b74d8"; url = "https://gitlab.gnome.org/GNOME/libgudev/-/archive/237/libgudev-237.tar.bz2"; }
     { name = "hackrf-2026.01.3.tar.gz"; sha256 = "48238f3a21189fa8cbe67838584cc045b9e5433767db8c9c30c1da02a1489f2c"; url = "https://github.com/greatscottgadgets/hackrf/archive/refs/tags/v2026.01.3.tar.gz"; }
-    { name = "librtlsdr-1261fbb285297da08f4620b18871b6d6d9ec2a7b.zip"; sha256 = "79925da4e274b87a98e5364459e0e3faf346bd56dfcb7d38fa089e5cc6785797"; url = "https://github.com/steve-m/librtlsdr/archive/1261fbb285297da08f4620b18871b6d6d9ec2a7b.zip"; }
+    { name = "libiio-0.26.tar.gz"; sha256 = "fb445fb860ef1248759f45d4273a4eff360534480ec87af64c6b8db3b99be7e5"; url = "https://github.com/analogdevicesinc/libiio/archive/refs/tags/v0.26.tar.gz"; }
+    { name = "libad9361-iio-0.3.tar.gz"; sha256 = "1dc35dd997e1938a97489fa1f349ee16889f9de8901a2c7af46184468dc90598"; url = "https://github.com/analogdevicesinc/libad9361-iio/archive/refs/tags/v0.3.tar.gz"; }
+    { name = "librtlsdr-797f8143266d983c56d8f35d2d442527529dd8a5.zip"; sha256 = "8f903af53b81e33427e35d6bb7adbd9e4415d0f2cea9369e44b062a43b6fcdee"; url = "https://github.com/steve-m/librtlsdr/archive/797f8143266d983c56d8f35d2d442527529dd8a5.zip"; }
     { name = "libsrtp-2.7.0.tar.gz"; sha256 = "54facb1727a557c2a76b91194dcb2d0a453aaf8e2d0cbbf1e3c2848c323e28ad"; url = "https://github.com/cisco/libsrtp/archive/refs/tags/v2.7.0.tar.gz"; }
     { name = "libusb-1.0.26.tar.bz2"; sha256 = "12ce7a61fc9854d1d2a1ffe095f7b5fac19ddba095c259e6067a46500381b5a5"; url = "https://github.com/libusb/libusb/releases/download/v1.0.26/libusb-1.0.26.tar.bz2"; }
+    { name = "libxml2-2.15.4.tar.xz"; sha256 = "98087fd181d9070724f3fbc65c7377db03038eb92bd882374daff44940138821"; url = "https://download.gnome.org/sources/libxml2/2.15/libxml2-2.15.4.tar.xz"; }
     { name = "LimeSuite-23.11.0.tar.gz"; sha256 = "fd8a448b92bc5ee4012f0ba58785f3c7e0a4d342b24e26275318802dfe00eb33"; url = "https://github.com/myriadrf/LimeSuite/archive/refs/tags/v23.11.0.tar.gz"; }
     { name = "wgpu-22.1.0.tar.gz"; sha256 = "7caa75f945d3d8cecac35d6de1e1a5cb112c2b38f80c6034d47971dae940eceb"; url = "https://github.com/gfx-rs/wgpu/archive/refs/tags/v22.1.0.tar.gz"; }
     { name = "nanobench-4.3.11.tar.gz"; sha256 = "53a5a913fa695c23546661bf2cd22b299e10a3e994d9ed97daf89b5cada0da70"; url = "https://github.com/martinus/nanobench/archive/refs/tags/v4.3.11.tar.gz"; }
@@ -63,13 +89,13 @@ let
     { name = "libqrencode-4.1.1.tar.gz"; sha256 = "5385bc1b8c2f20f3b91d258bf8ccc8cf62023935df2d2676b5b67049f31a049c"; url = "https://github.com/fukuchi/libqrencode/archive/refs/tags/v4.1.1.tar.gz"; }
     { name = "rapidyaml-0.11.1-src.tgz"; sha256 = "9d9938269adc25e9a9b84650338b87d130cf469d82685fffc028c325279619c1"; url = "https://github.com/biojppm/rapidyaml/releases/download/v0.11.1/rapidyaml-0.11.1-src.tgz"; }
     { name = "robin-map-1.4.0.tar.gz"; sha256 = "7930dbf9634acfc02686d87f615c0f4f33135948130b8922331c16d90a03250c"; url = "https://github.com/Tessil/robin-map/archive/refs/tags/v1.4.0.tar.gz"; }
-    { name = "SoapyAirspy-soapy-airspy-0.2.0.tar.gz"; sha256 = "4279ab4278fab699ef8325f3f921b2307496130a56028d33022be10916b6ccff"; url = "https://github.com/pothosware/SoapyAirspy/archive/refs/tags/soapy-airspy-0.2.0.tar.gz"; }
-    { name = "SoapyHackRF-soapy-hackrf-0.3.4.tar.gz"; sha256 = "c7a1b8aee7af9d9e11e42aa436eae8508f19775cdc8bc52e565a5d7f2e2e43ed"; url = "https://github.com/pothosware/SoapyHackRF/archive/refs/tags/soapy-hackrf-0.3.4.tar.gz"; }
-    { name = "SoapyRemote-soapy-remote-0.5.2.tar.gz"; sha256 = "66a372d85c984e7279b4fdc0a7f5b0d7ba340e390bc4b8bd626a6523cd3c3c76"; url = "https://github.com/pothosware/SoapyRemote/archive/refs/tags/soapy-remote-0.5.2.tar.gz"; }
-    { name = "SoapyRTLSDR-soapy-rtl-sdr-0.3.3.tar.gz"; sha256 = "757c3c3bd17c5a12c7168db2f2f0fd274457e65f35e23c5ec9aec34e3ef54ece"; url = "https://github.com/pothosware/SoapyRTLSDR/archive/refs/tags/soapy-rtl-sdr-0.3.3.tar.gz"; }
-    { name = "SoapySDR-soapy-sdr-0.8.1.tar.gz"; sha256 = "a508083875ed75d1090c24f88abef9895ad65f0f1b54e96d74094478f0c400e6"; url = "https://github.com/pothosware/SoapySDR/archive/refs/tags/soapy-sdr-0.8.1.tar.gz"; }
+    { name = "tomlplusplus-3.4.0.tar.gz"; sha256 = "8517f65938a4faae9ccf8ebb36631a38c1cadfb5efa85d9a72e15b9e97d25155"; url = "https://github.com/marzer/tomlplusplus/archive/v3.4.0.tar.gz"; }
+    { name = "tree-sitter-bash-0.25.1.tar.gz"; sha256 = "bd0d72814c6512de190439ce6562635c69ce27fa8bc59eaf381d44263579df36"; url = "https://github.com/tree-sitter/tree-sitter-bash/releases/download/v0.25.1/tree-sitter-bash.tar.gz"; }
+    { name = "tree-sitter-cpp-0.23.4.tar.gz"; sha256 = "7a2c55afe3028f4105f25762ea58cc16537d1f5a1dcd9cca90410b3cd5d46051"; url = "https://github.com/tree-sitter/tree-sitter-cpp/archive/refs/tags/v0.23.4.tar.gz"; }
+    { name = "tree-sitter-json-0.24.8.tar.xz"; sha256 = "3f53c9d908328ac6004dd51b1e1b617315886e1bd7e772430c5090252ec72fab"; url = "https://github.com/tree-sitter/tree-sitter-json/releases/download/v0.24.8/tree-sitter-json.tar.xz"; }
     { name = "tree-sitter-markdown-0.5.3.tar.gz"; sha256 = "22e40c51810e64c6bf073f0147f3abc167473206789e6dcbed4ba198ff3ca119"; url = "https://github.com/tree-sitter-grammars/tree-sitter-markdown/releases/download/v0.5.3/tree-sitter-markdown.tar.gz"; }
     { name = "tree-sitter-python-0.25.0.tar.gz"; sha256 = "7bce887eb2f33e94bf74a69645cf5138d4096720e54fd3269a6124c06b93c584"; url = "https://github.com/tree-sitter/tree-sitter-python/releases/download/v0.25.0/tree-sitter-python.tar.gz"; }
+    { name = "tree-sitter-yaml-0.7.2.tar.gz"; sha256 = "2707d9ff0556ee6c36a77299b4c08e5b2dcbd0d35f0b9688bb2ac8e276025f72"; url = "https://github.com/tree-sitter-grammars/tree-sitter-yaml/releases/download/v0.7.2/tree-sitter-yaml.tar.gz"; }
     { name = "tree-sitter-0.26.3.tar.gz"; sha256 = "7f4a7cf0a2cd217444063fe2a4d800bc9d21ed609badc2ac20c0841d67166550"; url = "https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v0.26.3.tar.gz"; }
     { name = "velopack_libc_1.2.0.zip"; sha256 = "547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835"; url = "https://github.com/velopack/velopack/releases/download/1.2.0/velopack_libc_1.2.0.zip"; }
     { name = "zlib-1.3.2.tar.xz"; sha256 = "d7a0654783a4da529d1bb793b7ad9c3318020af77667bcae35f95d0e42a792f3"; url = "https://zlib.net/zlib-1.3.2.tar.xz"; }
@@ -89,16 +115,19 @@ let
   ];
 
   # Only the wraps actually built need to be in the packagecache. With remote and
-  # inference disabled and soapy/glfw/openssl routed to nixpkgs, the giant ones
-  # (gstreamer, glib, wgpu/naga, openssl, the whole SoapySDR stack, limesuite,
-  # ...) are never built - dropping them keeps the packagecache small enough for
-  # the sandbox disk quota.
+  # inference disabled and glfw/openssl/the SDR device libraries routed to
+  # nixpkgs, the giant ones (gstreamer, glib, wgpu/naga, openssl, LimeSuite,
+  # bladeRF + no-OS, libiio/libxml2, libusb, ...) are never built - dropping
+  # them keeps the packagecache small enough for the sandbox disk quota.
   builtNames = [
-    "Catch2-3.4.0.tar.gz" "cpp-httplib-0.40.0.tar.gz" "fmt-11.2.0.tar.gz"
+    "Catch2-3.4.0.tar.gz" "cpp-httplib-0.56.0.tar.gz" "fmt-11.2.0.tar.gz"
     "glm-1.0.0.tar.gz" "nanobench-4.3.11.tar.gz" "nlohmann_json-3.12.0.zip"
     "libqrencode-4.1.1.tar.gz" "rapidyaml-0.11.1-src.tgz" "robin-map-1.4.0.tar.gz"
-    "tree-sitter-markdown-0.5.3.tar.gz" "tree-sitter-python-0.25.0.tar.gz"
-    "tree-sitter-0.26.3.tar.gz" "velopack_libc_1.2.0.zip" "zlib-1.3.2.tar.xz"
+    "tomlplusplus-3.4.0.tar.gz" "tree-sitter-0.26.3.tar.gz"
+    "tree-sitter-bash-0.25.1.tar.gz" "tree-sitter-cpp-0.23.4.tar.gz"
+    "tree-sitter-json-0.24.8.tar.xz" "tree-sitter-markdown-0.5.3.tar.gz"
+    "tree-sitter-python-0.25.0.tar.gz" "tree-sitter-yaml-0.7.2.tar.gz"
+    "velopack_libc_1.2.0.zip" "zlib-1.3.2.tar.xz"
     # WrapDB patches for the above:
     "glm_1.0.0-1_patch.zip" "qrencode_4.1.1-3_patch.zip" "robin-map_1.4.0-1_patch.zip"
     "tree-sitter_0.26.3-1_patch.zip" "zlib_1.3.2-1_patch.zip"
@@ -127,7 +156,9 @@ let
   };
 
   # --- Natural Earth geodata (parser.py downloads these at build time). --------
-  geodataFiles = {
+  # Most come from CyberEther's CDN; parser.py's GEODATA_URL_OVERRIDES take the
+  # rest straight from natural-earth-vector v5.1.2 on GitHub.
+  geodataCdn = {
     "ne_10m_admin_0_boundary_lines_land.geojson" = "sha256-dNnBYinAlf3mWUOpkZ4zdoLwRLzrzLEgdk847fO3D0o=";
     "ne_10m_admin_1_states_provinces_lines.geojson" = "sha256-Gh8wzKr0zJxL3jQmbwuMu5VdOkzyVLdWkSJV8ux8dbY=";
     "ne_10m_bathymetry_A_10000.geojson" = "sha256-iCHW6AA/CnSm0dGDed7YjuY4s+RX8rq51BJKzDzRVJI=";
@@ -141,19 +172,29 @@ let
     "ne_10m_bathymetry_I_2000.geojson" = "sha256-ze3HRs4G4aBRy4kF6PB4VSJcy9NWDOOmZgdlH8aVPOI=";
     "ne_10m_bathymetry_J_1000.geojson" = "sha256-+jAhmQHdTeNLn1sg9BvHwFX5/J1YzxV60meclSOc02Y=";
     "ne_10m_bathymetry_K_200.geojson" = "sha256-XGwYLahggVPqLc4i37MsmH5TkOC9ShIiZhQ7oYGntjY=";
-    "ne_10m_bathymetry_L_0.geojson" = "sha256-5e/Z9H1WeRyUnebQmdapzdTRrsqY1d1jlHwLRLmWYAg=";
     "ne_10m_coastline.geojson" = "sha256-b3WuDg3hV7FJRuIlXrH1SG2aE4GQMuJtRhCFLSlniPY=";
     "ne_10m_lakes.geojson" = "sha256-LQNvU97exXgAHFwwwpWe59TuvBMGkA+kNnxJkp7I8tk=";
-    "ne_10m_land.geojson" = "sha256-GskHlkCLxq1pEdaUSEhdPE2/IZA3AIA2igmXbhyfdBY=";
     "ne_10m_populated_places_simple.geojson" = "sha256-/T+oZ6Mgy9XFtrtbxVCv7sKTn7LO9ojlCABygqVaxC8=";
     "ne_10m_rivers_lake_centerlines.geojson" = "sha256-u4VKkA7L07QI30bV4W4+D5dLpVmT+di1wm6FUnPAkFo=";
     "ne_10m_urban_areas.geojson" = "sha256-UTb/2BapsowPKV5nl7TAPqpCG+gNeLkPVC20qTLdRJc=";
   };
+  geodataNaturalEarth = {
+    "ne_10m_admin_0_boundary_lines_disputed_areas.geojson" = "sha256-afGdp2TmmCtDrrrksaNW/+dMM/KjzbRiY3wLqOlpwws=";
+    "ne_10m_admin_0_countries.geojson" = "sha256-I57sV6wX8QChHiU2z/xWdSwxi1CudlsJGP96q0zo8lU=";
+    "ne_10m_admin_1_states_provinces.geojson" = "sha256-ItDjrYXrPifxfKv4ui1Q5VT7wnqHeW/4kdlYGF2mL7U=";
+    "ne_10m_airports.geojson" = "sha256-KIkqiS9nDxz2VMYiU8YWn9wlBLkslWrdtKyCJPUM6+A=";
+    "ne_10m_geographic_lines.geojson" = "sha256-4NlrZcTwiFYJZVDbXkUH0oIvBf4cwHqtsWrVzLOpSOc=";
+    "ne_10m_geography_marine_polys.geojson" = "sha256-U/hl6P+pZs3UAhRcgsXNFO586XTNDrmj9Z8DpM/S1mw=";
+    "ne_10m_geography_regions_elevation_points.geojson" = "sha256-+YoWhnhnFG7EFG1tSxjII+7tsoJZR95mYRbPmk4/Q8s=";
+    "ne_10m_geography_regions_polys.geojson" = "sha256-t7JuUOqRfTaWrsh/ky3vK/X4kPV3DkQdWcFixvTJKnc=";
+  };
+  fetchGeodata = base: lib.mapAttrsToList
+    (fn: h: "cp ${fetchurl { url = "${base}${fn}"; hash = h; }} $out/${fn}\n");
   geodata = runCommandLocal "cyberether-geodata" { } (''
     mkdir -p $out
-  '' + lib.concatStrings (lib.mapAttrsToList
-    (fn: h: "cp ${fetchurl { url = "https://cdn.cyberether.org/geodata/${fn}"; hash = h; }} $out/${fn}\n")
-    geodataFiles));
+  '' + lib.concatStrings (
+    fetchGeodata "https://cdn.cyberether.org/geodata/" geodataCdn
+    ++ fetchGeodata "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/" geodataNaturalEarth));
 
   # CyberEther requires meson >= 1.11.0. nixpkgs' meson is used as is: it used
   # to be overridden to 1.11.0 when the pin shipped 1.10.2, but swapping only
@@ -171,25 +212,26 @@ let
 in
 stdenv.mkDerivation {
   pname = "cyberether";
-  version = "1.9.1";
+  version = "1.15.0";
 
   src = fetchFromGitHub {
     owner = "luigifcruz";
     repo = "CyberEther";
-    rev = "v1.9.1";
-    hash = "sha256-pT9dbc6NNvUAvhuOr7WgorKBsNPfrz3Jv/3MCFs8cNo=";
+    rev = "v1.15.0";
+    hash = "sha256-vEdQTJdO0a4YYRcA9QLTydGGFGvnvJLAjHp7N1T8+Yg=";
   };
 
   nativeBuildInputs = [
     mesonForBuild ninja pkg-config git pythonForBuild glslang spirv-cross
-    wayland-scanner
+    wayland-scanner makeWrapper
   ];
   buildInputs = [
     vulkan-headers vulkan-loader openssl libGL
-    # glfw and the SoapySDR stack come from nixpkgs (routed away from the wraps).
-    glfw soapysdr
-    xorg.libX11 xorg.libXrandr xorg.libXinerama xorg.libXcursor xorg.libXi
-    xorg.libXext libxcb xorgproto
+    # glfw and the SDR device libraries come from nixpkgs (routed away from the
+    # wraps).
+    glfw
+    rtl-sdr-osmocom airspy airspyhf hackrf limesuite libbladeRF libad9361 libiio
+    libx11 libxrandr libxinerama libxcursor libxi libxext libxcb xorgproto
     wayland wayland-protocols libxkbcommon
     udev
   ];
@@ -233,24 +275,39 @@ stdenv.mkDerivation {
     EOF
     sed -i 's/^    //' meson/loaders/openssl/meson.build
 
-    # Route the SoapySDR stack to nixpkgs instead of statically link-whole'ing
-    # ~10 vendored subprojects (soapysdr + airspy/lime/rtlsdr/hackrf modules and
-    # their device libs). CyberEther links SoapySDR core; the device modules are
-    # loaded at runtime from SOAPY_SDR_PLUGIN_PATH (set by the wrapper).
-    cat > meson/loaders/soapy/meson.build <<'EOF'
-    soapysdr_dep = dependency('SoapySDR', required: false)
-    deps = [soapysdr_dep]
-    all_deps_found = true
-    foreach x_dep : deps
-        all_deps_found = all_deps_found and x_dep.found()
-    endforeach
-    if all_deps_found
-        cfg_lst.set('JETSTREAM_LOADER_SOAPY_AVAILABLE', true)
+    # Route the built-in SDR drivers (the SDR and SDR Sweep blocks) to nixpkgs
+    # instead of statically linking ~10 vendored subprojects (librtlsdr,
+    # airspy/airspyhf, hackrf, LimeSuite, bladeRF + no-OS, libiio + libxml2,
+    # libad9361, libusb). nixpkgs carries the releases the wraps pin (bladeRF
+    # 2025.10, hackrf 2026.01.3, LimeSuite 23.11.0, libiio 0.26, libad9361 0.3;
+    # airspyhf is newer, 1.8.1). The drivers include LimeSuite's
+    # ConnectionRegistry.h, which nixpkgs installs under include/lime.
+    cat > meson/loaders/sdr/meson.build <<'EOF'
+    sdr_found = false
+    limesuite_pc = dependency('LimeSuite', required: true)
+    sdr_families = {
+        'RTLSDR': [dependency('librtlsdr', required: true)],
+        'AIRSPY': [dependency('libairspy', required: true)],
+        'AIRSPYHF': [dependency('libairspyhf', required: true)],
+        'HACKRF': [dependency('libhackrf', required: true)],
+        'LIMESUITE': [limesuite_pc, declare_dependency(compile_args:
+            ['-I' + limesuite_pc.get_variable(pkgconfig: 'includedir') / 'lime'])],
+        'BLADERF': [dependency('libbladeRF', required: true)],
+        'PLUTOSDR': [dependency('libad9361', required: true),
+                     dependency('libiio', required: true)],
+    }
+    foreach family, deps : sdr_families
+        cfg_lst.set('JETSTREAM_LOADER_' + family + '_AVAILABLE', true)
         dep_lst += deps
+        sdr_found = true
+        ldr_lst += {family: true}
+    endforeach
+    if sdr_found
+        cfg_lst.set('JETSTREAM_LOADER_SDR_AVAILABLE', true)
     endif
-    ldr_lst += {'SoapySDR': all_deps_found}
+    ldr_lst += {'SDR': sdr_found}
     EOF
-    sed -i 's/^    //' meson/loaders/soapy/meson.build
+    sed -i 's/^    //' meson/loaders/sdr/meson.build
 
     # Route glfw to nixpkgs too (avoids building it + the whole X11/Wayland stack
     # from the wrap).
@@ -273,12 +330,22 @@ stdenv.mkDerivation {
     EOF
     sed -i 's/^    //' meson/loaders/glfw/meson.build
 
-    # cpp-httplib 0.40's experimental split/compiled mode omits the exported
-    # WebSocketClient definitions from the static library as consumed here,
-    # leaving CyberEther's WebSocket module unresolved at the final link. Its
-    # supported default is header-only, where those definitions remain inline.
+    # cpp-httplib's experimental split/compiled mode omitted the exported
+    # WebSocketClient definitions from the static library as consumed here
+    # (seen with 0.40), leaving CyberEther's WebSocket module unresolved at the
+    # final link. Its supported default is header-only, where those definitions
+    # remain inline, so the 0.56 wrap stays header-only too.
     substituteInPlace meson/loaders/cpphttplib/meson.build \
       --replace-fail "'compile=true'" "'compile=false'"
+
+    # The SoapySDR block accepts only ABI "0.8" (the 0.8.1 release). nixpkgs
+    # ships a later snapshot whose ABI is "0.8-3": the three bumps since 0.8
+    # only added C++ API (Device::getSettingInfo overloads, readSetting
+    # constness, Logger::getLogLevel), and the C structs and calls the block
+    # dlsyms are unchanged. Accept "0.8-N" too.
+    substituteInPlace src/domains/io/soapy/library/soapy_runtime.cc \
+      --replace-fail 'if (version != SoapyAbi::Version) {' \
+        'if (version != SoapyAbi::Version && !version.starts_with(std::string(SoapyAbi::Version) + "-")) {'
   '';
 
   # The geodata step does `pymod.find_installation(py.full_path(), modules:
@@ -310,6 +377,28 @@ stdenv.mkDerivation {
   # diagnostic). Serialize this package so it is reliable on modest local and
   # self-hosted CI workers; the outer environment matrix remains parallel.
   enableParallelBuilding = false;
+
+  # `meson install` also installs the statically linked subprojects' headers,
+  # archives and .pc files (zlib, qrencode, tree-sitter, cpp-httplib), which
+  # then land in the environment profile. As the images do since v1.1.3,
+  # install only CyberEther itself plus fmt, whose headers its public headers
+  # include.
+  preInstall = ''
+    mesonInstallFlagsArray+=(--skip-subprojects "$(meson introspect --projectinfo . \
+      | python3 -c 'import json,sys; print(",".join(s["name"] for s in json.load(sys.stdin)["subprojects"] if s["name"] != "fmt"))')")
+  '';
+
+  # The SoapySDR block dlopens libSoapySDR at runtime and only looks in the
+  # default search path and /usr/local/lib, neither of which holds it under
+  # Nix (and it asks for libSoapySDR.so.0.8, while the snapshot's soname is
+  # .so.0.8-3). Point it at RF Swift's SoapySDR, whose lib/SoapySDR/modules*
+  # carries every device module, so the block sees the same radios as the other
+  # tools. --set-default keeps a user's own CYBERETHER_SOAPYSDR_LIBRARY.
+  postFixup = ''
+    test -e ${soapysdr-with-plugins}/lib/libSoapySDR.so
+    wrapProgram $out/bin/cyberether \
+      --set-default CYBERETHER_SOAPYSDR_LIBRARY ${soapysdr-with-plugins}/lib/libSoapySDR.so
+  '';
 
   meta = {
     description = "CyberEther: heterogeneous SDR signal visualisation (Vulkan/WebGPU)";

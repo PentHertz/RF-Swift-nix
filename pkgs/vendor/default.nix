@@ -101,10 +101,13 @@ rec {
     '' else if stdenv.hostPlatform.isAarch64 then ''
       unzip -q -o "$src" '*/lib/aarch64/*' '*.h' -d src
     '' else ''
-      # x86_64 APIs use both linux_x64 (modern analyzers) and linux (legacy
-      # TG/VSG25 APIs). Select Ubuntu builds where distributions are present.
+      # x86_64 APIs use both linux_x64 (modern analyzers) and linux (PCR/PN,
+      # TG and VSG25 APIs). Take only the Ubuntu builds: every distribution's
+      # copy carries the same file name, so extracting them all left the one
+      # installed up to find's traversal order. TG ships Ubuntu 14.04 (1.1.0)
+      # and 24.04 (1.1.3) builds; the images install the newer one.
       unzip -q -o "$src" '*/lib/linux_x64/Ubuntu 18.04/*' \
-        '*/lib/linux/*' '*.h' -d src
+        '*/lib/linux/Ubuntu 18.04/*' '*/lib/linux/Ubuntu 24.04/*' '*.h' -d src
     '') + ''
       runHook postUnpack
     '';
