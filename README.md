@@ -125,7 +125,8 @@ Run `rfswift nix catalog` or `nix eval .#catalog` for the live list. At a glance
 | Environment | What it gives you |
 |-------------|-------------------|
 | `sdr_light` | GNU Radio, GQRX, SDR++, URH, inspectrum, rtl_433, dump1090/readsb, plus the full SDR driver layer |
-| `sdr_full`  | `sdr_light` plus SDRangel, SatDump, SigDigger, GNU Radio OOT modules and an ML stack |
+| `sdr_full`  | `sdr_light` plus SDRangel, SatDump, SigDigger, DecSAT, GNU Radio OOT modules and an ML stack |
+| `sdr_hacks` | `sdr_light` plus chips repurposed as SDRs: MediaTek Wi-Fi dongles and routers, ESP32 radios, Semtech LR2021 |
 | `cyberether` | CyberEther built from source (x86_64 Linux), with the SoapySDR device stack |
 | `cyberether_release` | CyberEther from upstream's prebuilt release: no compile, x86_64/aarch64 Linux and macOS |
 | `rfid`      | Proxmark3, libnfc, MIFARE crackers, NFC utilities |

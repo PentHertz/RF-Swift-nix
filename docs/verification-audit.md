@@ -233,6 +233,28 @@ aarch64-darwin and x86_64-linux, the embedded catalog check included.
 Not exercised: CyberEther with a GPU and a radio (the containers have neither),
 Logic 2 and Burp Suite beyond building, wifit3 with a USB adapter.
 
+## Evidence collected on 2026-10-19 (RF-Swift-images v1.2.0 sync)
+
+Same host, containers and closure-diff method. Changed derivations against
+`HEAD` (v1.1.3 committed): 37 on aarch64-linux and 37 on x86_64-linux, all
+built; the macOS-capable packages (birriasdr, lr2021-sdr, esp-sdr,
+esp-sdr-bridge, ad-miner, mtkicaptool, mtkcsidump, mtkmon) built natively on
+aarch64-darwin. `tests/verify.sh` passes on aarch64-darwin and x86_64-linux.
+
+- With `SOAPY_SDR_PLUGIN_PATH` pointing at mtk79icap and soapyespsdr, RF
+  Swift's `SoapySDRUtil --info` lists the `mt7921` and `espsdr` factories next
+  to its own, which is how the sdr_hacks profile exposes them.
+- w1700k-sdr builds the MT7996 firmware set (firmware.json schema 2) and its
+  `w1700k` CLI runs; decsat's CLI runs on both Linux architectures;
+  mtkwifitools installs its 19 tools, plus `mtk_ramreader` on x86_64.
+- Smoke runs on macOS: `birria_rx` (reports the absent device), `lr2021_lab
+  selftest`, the LR2021 and ESP-SDR Python tools, `esp-sdr-bridge --help`,
+  `AD-miner -h` with the fork patch in place, and the imports of the ICAP and
+  CSI GUI clients (not launched).
+
+Not exercised: any of the repurposed radios, the DecSAT GUI, AD Miner against
+a BloodHound database.
+
 ## Defects found and fixed
 
 ### Qt GRC crashed at startup

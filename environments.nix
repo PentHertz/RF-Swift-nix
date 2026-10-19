@@ -142,6 +142,153 @@
     ];
   };
 
+  ######################################################################
+  # SDR hacks (add-on to sdr_light: chips never meant to be SDRs)
+  ######################################################################
+  sdr_hacks = {
+    description = "sdr_light plus repurposed chips as SDRs: MediaTek Wi-Fi dongles and routers (BirriaSDR, Mtk79ICAP, W1700K), ESP32 radios (ESP-SDR, SoapyESPSDR, esp-sdr-bridge) and the Semtech LR2021, with their flashing tools.";
+    category = "SDR";
+    prerequisites = [
+      "soapysdr-with-plugins"
+      "rfswift-udev-rules"
+      "soapyplutosdr"
+      "soapyremote"
+      "soapyuhd"
+      "soapybladerf"
+      "rtl-sdr-osmocom"
+      "hackrf"
+      "airspy"
+      "airspyhf"
+      "limesuite"
+      "uhd"
+      "libbladeRF"
+      "libhydrasdr"
+      "libiio"
+      "libad9361"
+      "osmo-fl2k"
+      "libresdr-firmware"
+      "signalhound-sdk"
+      "harogic-htra-sdk"
+      # Device stacks the sdrsa_devices image builds from source.
+      "libxtrx"
+      "librfnm"
+      "litex-m2sdr"
+      "usdr-lib"
+    ];
+    packages = [
+      "rfswift-udev-rules"
+      # SoapySDR + all its device plugins (rtlsdr, hackrf, uhd, airspy, bladerf, lime, plutosdr, remote, ...)
+      "soapysdr-with-plugins"
+      "soapyplutosdr"
+      "soapyremote"
+      "soapyuhd"
+      "soapybladerf"
+      # Device drivers inherited from sdrsa_devices
+      "rtl-sdr-osmocom"
+      "hackrf"
+      "airspy"
+      "airspyhf"
+      "limesuite"
+      "uhd"
+      "libbladeRF"
+      "libhydrasdr"
+      "libiio"
+      "libad9361"
+      "osmo-fl2k"
+      "libresdr-firmware"
+      "signalhound-sdk"
+      "harogic-htra-sdk"
+      # Device stacks the sdrsa_devices image builds from source: XTRX (with
+      # SoapyXTRX), RFNM (+ SoapyRFNM), LiteX M2SDR, uSDR, FUNcube (qthid GUI;
+      # gr-funcube is bundled into GNU Radio) and SoapyHydraSDR. The Soapy
+      # modules are also wired into soapysdr-with-plugins (pkgs/default.nix).
+      "libxtrx"
+      "librfnm"
+      "soapy-rfnm"
+      "soapyhydrasdr"
+      "litex-m2sdr"
+      "usdr-lib"
+      "qthid"
+      # GNU Radio is after the device layer; OOT modules are bundled in it so
+      # GRC discovers them from the same prefix.
+      "gnuradio-rfswift-light"
+      # End-user applications. The PentHertz/HydraSDR forks and the source-only
+      # decoders below are compiled from source (see pkgs/).
+      "gqrx"
+      "sdrpp-hydrasdr"
+      "cubicsdr"
+      "inspectrum-hydrasdr"
+      "urh-ng"
+      "multimon-ng"
+      "rtl_433"
+      "hydrasdr433"
+      "kalibrate-hydrasdr"
+      "dump1090-fa"
+      "readsb"
+      "dumpvdl2"
+      "dumphfdl"
+      "retrogram-soapysdr"
+      "gqrx-scanner"
+      "sdrangel"
+      "luaradio-hydrasdr"
+      "gnss-sdr"
+      "nanovna-saver"
+      "nanovna-qt"
+      "librevna"
+      "xnec2c"
+      "jupyter"
+      "kc908"
+      "kc908-sdk"
+      "signalhound-spike"
+      "signalhound-vsg60"
+      "sastudio"
+      # Sub-GHz and 802.15.4 attack dongles: rfcat (YARD Stick One and other
+      # CC1111 dongles) and KillerBee (Zigbee / IEEE 802.15.4).
+      "python3Packages.rfcat"
+      "killerbee"
+      # sdr_hacks image (on top of sdr_light). The Soapy modules (mt7921,
+      # espsdr) reach every tool here through the profile's
+      # SOAPY_SDR_PLUGIN_PATH, which RF Swift sets.
+      # Flashing and console tools for the firmware-based hacks.
+      "esptool"
+      "picocom"
+      "tio"
+      "python3Packages.pyserial"
+      # MediaTek Wi-Fi: MT7921AU/MT7961 USB dongles and the Gemtek W1700K
+      # Wi-Fi 7 router (MT7996).
+      "birriasdr"
+      "mtk79icap"
+      "w1700k-sdr"
+      # ESP32 family, and the Semtech LR2021 on an ESP32-P4 board.
+      "esp-sdr"
+      "esp-sdr-bridge"
+      "soapyespsdr"
+      "lr2021-sdr"
+    ];
+    # Remaining device modules present in the image scripts but not yet
+    # reproducibly packaged for Nix are explicit rather than silently claimed.
+    missing = [
+      "SoapyHarogic"
+      "XTRX / LiteX M2SDR / uSDR PCIe kernel modules (host drivers; the userspace stacks are packaged)"
+      "SDRplay API / SoapySDRPlay (nixpkgs 3.15.1 source URL currently returns 404)"
+      "gr-htra"
+      "gr-signalhound"
+      "Leo Bodnar LBE-1420/1421 tools"
+      "gnsslogger"
+      "pocketVNA"
+      "LibreCAL"
+      "Lotus BUDC tuner"
+      # Prebuilt Linux binaries / large Ubuntu-specific installers with no clean
+      # source build: not reproducibly packageable for Nix (and Linux-only).
+      "KCSDI (Deepace, prebuilt AppImage)"
+      "Artemis (prebuilt binary)"
+      "FISSURE (RF framework; large pinned pip/apt install into a system venv)"
+      # sdr_hacks pieces that live on the host or the device, not in a profile.
+      "Mtk79ICAP fork of the mt7921u kernel driver and its patched firmware (built and installed on the host; driver sources and the firmware patcher are packaged)"
+      "W1700K router OS (Buildroot/Linux/U-Boot image, ~500 MB of downloads; not built in the images either)"
+    ];
+  };
+
   sdr_full = {
     description = "Full SDR arsenal: sdr_light plus SDRangel, SatDump, SigDigger, GQRX and many GNU Radio OOT modules available in nixpkgs.";
     category = "SDR";
@@ -224,6 +371,8 @@
       "sdrangel"
       "luaradio-hydrasdr"
       "satdump"
+      # DVB-S2/S2X / DVB-S / SCPC satellite receiver (GUI + CLI).
+      "decsat"
       "sigdigger"
       "qsstv"
       "gpredict"
@@ -800,8 +949,17 @@
       "python3Packages.pyftdi"
       "glasgow"
       "python3Packages.chipwhisperer"
+      # MediaTek Wi-Fi firmware reverse engineering (MtkWifiRev): firmware
+      # tools, the Android ICAP spectrum plotter, the CSI client and MtkMon
+      # (Nexmon for NDS32, sources).
+      "mtkwifitools"
+      "mtkicaptool"
+      "mtkcsidump"
+      "mtkmon"
     ];
-    missing = [ ];
+    missing = [
+      "MtkWifiTools barepatcher (edits and compiles NDS32 code in its own checkout with a separately downloaded x86-64 toolchain)"
+    ];
   };
 
   ######################################################################
@@ -932,6 +1090,8 @@
       "bloodyad"
       "coercer"
       "targetedkerberoast"
+      # BloodHound graph -> static HTML AD risk report.
+      "ad-miner"
     ];
     missing = [ ];
   };

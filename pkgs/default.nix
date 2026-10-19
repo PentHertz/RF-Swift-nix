@@ -98,6 +98,22 @@ with pkgs;
   cyberether = callPackage ./cyberether { inherit soapysdr-with-plugins; };
   # Upstream's prebuilt release binaries: no compile, and aarch64 Linux/macOS.
   cyberether-release = callPackage ./cyberether/release.nix { };
+  # DVB-S2/S2X / DVB-S / SCPC satellite receiver, GUI + CLI (sdr_full image).
+  decsat = callPackage ./decsat.nix { };
+
+  ## --- SDR hacks: chips never meant to be SDRs (sdr_hacks image) --------------
+  # MediaTek Wi-Fi (MT7921AU/MT7961 dongles, the W1700K's MT7996), ESP32 radios
+  # and the Semtech LR2021. The Soapy modules (mtk79icap, soapyespsdr) are not
+  # folded into soapysdr-with-plugins: RF Swift puts every environment
+  # profile's lib/SoapySDR/modules* on SOAPY_SDR_PLUGIN_PATH, so the tools of
+  # sdr_hacks find them without rebuilding everything linked to SoapySDR.
+  birriasdr = callPackage ./sdr-hacks/birriasdr.nix { };
+  mtk79icap = callPackage ./sdr-hacks/mtk79icap.nix { };
+  w1700k-sdr = callPackage ./sdr-hacks/w1700k-sdr.nix { };
+  esp-sdr = callPackage ./sdr-hacks/esp-sdr.nix { };
+  esp-sdr-bridge = callPackage ./sdr-hacks/esp-sdr-bridge.nix { };
+  soapyespsdr = callPackage ./sdr-hacks/soapyespsdr.nix { };
+  lr2021-sdr = callPackage ./sdr-hacks/lr2021-sdr.nix { };
   retrogram-soapysdr = callPackage ./retrogram-soapysdr.nix { };
   gqrx-scanner = callPackage ./gqrx-scanner.nix { };
   osmo-fl2k = callPackage ./osmo-fl2k.nix { };
@@ -613,9 +629,16 @@ RULES
 
   ## --- Active Directory (source Python) --------------------------------
   targetedkerberoast = callPackage ./sec/targetedkerberoast.nix { };
+  # nixpkgs' recipe moved to 1.9.0 with the images' Python 3.14 fix.
+  ad-miner = callPackage ./sec/ad-miner.nix { };
 
   ## --- Hardware: RF Swift's serial baud-rate finder, ChipWhisperer -------
   baudrate = callPackage ./baudrate.nix { };
+  # MediaTek Wi-Fi firmware reverse engineering (MtkWifiRev).
+  mtkwifitools = callPackage ./mtkwifirev/mtkwifitools.nix { };
+  mtkicaptool = callPackage ./mtkwifirev/mtkicaptool.nix { };
+  mtkcsidump = callPackage ./mtkwifirev/mtkcsidump.nix { };
+  mtkmon = callPackage ./mtkwifirev/mtkmon.nix { };
   # nixpkgs' 5.7.0 is marked broken (NumPy 1.26 pin); this is upstream's NumPy 2
   # line. Listed as python3Packages.chipwhisperer, so it shadows the broken one.
   "python3Packages.chipwhisperer" = pkgs.python3Packages.callPackage ./chipwhisperer.nix { };

@@ -8,6 +8,66 @@ Keep a Changelog (https://keepachangelog.com). Dates are ISO-8601.
 First development line of the RF Swift Nix engine flake, tracking the RF Swift
 binary's v4.0.0-dev.
 
+### Synced with RF-Swift-images v1.2.0
+
+Everything RF-Swift-images added between v1.1.3 and v1.2.0.
+
+Added:
+
+- `sdr_hacks` environment, for the images' new sdr_hacks add-on image:
+  everything in sdr_light plus hardware that was never meant to be an SDR.
+  Its two SoapySDR modules (`driver=mt7921`, `driver=espsdr`) are not folded
+  into `soapysdr-with-plugins`, which would rebuild everything linked to
+  SoapySDR: RF Swift already puts each environment profile's
+  `lib/SoapySDR/modules*` on `SOAPY_SDR_PLUGIN_PATH`, so every tool of the
+  environment finds them.
+  - `birriasdr`: an MT7921AU/MT7961 USB Wi-Fi dongle as a 40 MSps I/Q
+    receiver over libusb (`birria_rx`, libbirriasdr), udev rule included;
+    Linux and macOS.
+  - `mtk79icap`: the same sticks as a SoapySDR source through a fork of the
+    mt7921u driver - the SoapyMT7921 module, `mt7921iq_rx`, the firmware
+    patcher `mt7961-iq-fw-v65` (works from the user's own linux-firmware copy)
+    and `mt7921iq-setup`; the kernel driver is built on the host from
+    `share/mtk79icap/driver`.
+  - `w1700k-sdr`: the Gemtek W1700K router's MT7996 as an SDR - host tools
+    (`w1700k-stream`, `w1700k-spectrum`, `sdr-recv`, built without
+    `-march=native`), the MT7996 firmware set built here for bare-metal RV32
+    with unwrapped clang/lld, and the `w1700k` CLI (over ssh).
+  - `esp-sdr` (host tools, ESP-IDF sources and `espsdr-fetch-firmware`),
+    `esp-sdr-bridge` (SpyServer/rtl_tcp server, with its v0.1.0 ESP32-S3
+    firmware) and `soapyespsdr` (Linux; its Ethernet transport uses
+    `SO_BINDTODEVICE`). The ESP-SDR prebuilt firmware set is republished under
+    the same URLs with each release, so it cannot be pinned in the store:
+    `espsdr-fetch-firmware` mirrors it on demand (the images' own script,
+    every part sha256-checked against the manifest) and writes an esptool
+    `flash.sh` per board.
+  - `lr2021-sdr`: the Semtech LR2021 on an ESP32-P4 board - host libraries
+    and tools, the Python TX/decode helpers and the v0.3.0 ESP32-P4 firmware.
+    The fetch keeps only the two research files the tests read, not the
+    repository's ~88 MB of captures.
+  - esptool, picocom, tio and pyserial for flashing and consoles.
+- `decsat` (sdr_full): DecSAT 0.10.17, a DVB-S2/S2X, DVB-S and SCPC
+  satellite receiver, GUI and CLI, built from source with its libopus and
+  libxaac submodules; the GUI's dlopened X11/Wayland/EGL libraries are on its
+  RUNPATH, ffmpeg and curl on its PATH. Linux only, like upstream: on macOS
+  libxaac's generic kernels are compiled out by Apple clang's `__ARM_NEON__`.
+- `ad-miner` (ad): AD Miner 1.9.0 (nixpkgs has 1.8.1), with the images' fix
+  for Python 3.14: its pool workers read a global only the parent process
+  sets, which the new default `forkserver` start method leaves empty, so
+  `fork` is forced.
+- MediaTek Wi-Fi firmware reverse engineering (hardware): `mtkwifitools`
+  (the single-file firmware tools, plus `mtk_ramreader` on x86_64, which links
+  the repository's prebuilt x86-64 binutils archives), `mtkicaptool` (the
+  ICAP spectrum plotter `mtk_icap_plot`, with adb), `mtkcsidump` (the PyQt5
+  CSI client `mtk_csi_client`) and `mtkmon` (Nexmon for NDS32, sources).
+
+Not carried over (listed in the environments' `missing`):
+
+- MtkWifiTools' barepatcher: it edits and compiles code in its own checkout
+  with a separately downloaded x86-64 NDS32 toolchain.
+- Mtk79ICAP's kernel driver and patched firmware, and the W1700K router OS,
+  which belong on the host or the device.
+
 ### Synced with RF-Swift-images v1.1.3
 
 Everything RF-Swift-images added or bumped between v1.1.2 and v1.1.3.
