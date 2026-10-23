@@ -4,13 +4,13 @@
 
 stdenv.mkDerivation rec {
   pname = "dumpvdl2";
-  version = "2.3.0";
+  version = "2.7.0";
 
   src = fetchFromGitHub {
     owner = "szpajder";
     repo = "dumpvdl2";
     rev = "v${version}";
-    hash = "sha256-lmjVLHFLa819sgZ0NfSyKywEwS6pQxzdOj4y8RwRu/8=";
+    hash = "sha256-sKbJdSUmtwFdn1f6GR24L5fmUA351icLm6rsfK81+Gw=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];

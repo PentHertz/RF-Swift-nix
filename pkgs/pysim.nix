@@ -42,7 +42,7 @@ let
 in
 python3Packages.buildPythonApplication {
   pname = "pysim";
-  version = "0-unstable-2026-04-22";
+  version = "0-unstable-2026-10-09";
   pyproject = true;
 
   # Pin an exact commit, never a branch name: fetchFromGitHub is a fixed-output
@@ -53,8 +53,8 @@ python3Packages.buildPythonApplication {
   src = fetchFromGitHub {
     owner = "osmocom";
     repo = "pysim";
-    rev = "d4717bd014901d41863ccd408a3ea538d6fc1fc6";
-    hash = "sha256-NlF63uYSUFhNrkT0oV2P46cdlL5MAJ69CObpqJR/McI=";
+    rev = "9aa8934da2415b161eb9726adad2ba7b4f35d1a7";
+    hash = "sha256-0bqryqhL0CEETVGJ/xgp9EgTV2or8jrN1Y+jFWBQE20=";
   };
 
   build-system = pick [ "setuptools" ];

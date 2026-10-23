@@ -10,13 +10,13 @@
 
 stdenv.mkDerivation {
   pname = "ocudu";
-  version = "unstable-2026";
+  version = "unstable-2026-10-23";
 
   src = fetchFromGitLab {
     owner = "ocudu";
     repo = "ocudu";
-    rev = "1f2d487e24f57672fe808e8d15bfd3698a518f47";
-    hash = "sha256-DpqDtYimmHOkTDcW6wyoa14VJYE9fm2IlxExH3ff1mA=";
+    rev = "448bbae8305fa3190d1dd1a77efd87dfdfdd24bf";
+    hash = "sha256-OJ+5R62PNYFyHb6eP7QNcE21t9HludxICg/SkP33Nlc=";
   };
 
   nativeBuildInputs = [ cmake pkg-config perl ];

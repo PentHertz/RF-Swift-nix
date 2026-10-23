@@ -4,11 +4,11 @@
 
 stdenv.mkDerivation rec {
   pname = "joern";
-  version = "4.0.609";
+  version = "4.0.665";
 
   src = fetchurl {
     url = "https://github.com/joernio/joern/releases/download/v${version}/joern-cli-linux-x86_64.zip";
-    hash = "sha256-siYXcdlFIdeHABwT1w/UOYwJoVLKCLmJO63yGmjzO+U=";
+    hash = "sha256-p7Le2w7lE/NEWZNuP+U9q2YXfpu9lVO7RnqoJ9ZkUhE=";
   };
 
   nativeBuildInputs = [ unzip makeWrapper ];

@@ -7,13 +7,13 @@
 
 stdenv.mkDerivation {
   pname = "fluxion";
-  version = "6.9-unstable";
+  version = "6.32-unstable-2026-09-19";
 
   src = fetchFromGitHub {
     owner = "FluxionNetwork";
     repo = "fluxion";
-    rev = "cac48e9850fe992502590becaeb83c148873c4f0";
-    hash = "sha256-PBYBEqYi1lvTx4TTN3ZoY5t36CuNECAswM1mU6amvqc=";
+    rev = "f064d246a020a50fa4ded8cd440427e30c7a3818";
+    hash = "sha256-jnVPe3N3yNQlyZ+jf/viRaph3zTRbCmEhTI3BvgzSTE=";
   };
 
   nativeBuildInputs = [ makeWrapper ];

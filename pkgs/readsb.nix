@@ -4,13 +4,13 @@
 
 stdenv.mkDerivation rec {
   pname = "readsb";
-  version = "3.14.1623";
+  version = "3.16.17";
 
   src = fetchFromGitHub {
     owner = "wiedehopf";
     repo = "readsb";
     rev = "v${version}";
-    hash = "sha256-1UkOGgtNA6RUaTn/ITZmRPbmzEELZeL2+FreeCn+abM=";
+    hash = "sha256-iEnD2ivfkSwyCr18yYEuRv/8Vc7Tzt4Iq71ZmbgTHwE=";
   };
 
   # readsb's Makefile shells out to git for a version string.

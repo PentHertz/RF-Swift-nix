@@ -8,6 +8,92 @@ Keep a Changelog (https://keepachangelog.com). Dates are ISO-8601.
 First development line of the RF Swift Nix engine flake, tracking the RF Swift
 binary's v4.0.0-dev.
 
+### Security fixes and version refresh (2026-10-23)
+
+Security:
+
+- nixpkgs moved to 75ba8332 (master as built by Hydra on 2026-10-23;
+  nixos-unstable, 2026-10-20, predates the fixes below):
+  - PHP2Shell (CVE-2026-109618, CVE-2026-109619): PHP 8.5.12, 8.4.27 and
+    8.3.36. In the environments PHP serves fluxion's captive portal.
+  - eMudhra CA compromise: `cacert` 3.131.1, whose NSS 3.131.1 root set drops
+    emSign ECC Root CA - G3, emSign Root CA - C1 and emSign ECC Root CA - C3,
+    the roots of the leaked intermediates (curl, OpenSSL, Python's certifi
+    and the JDK's cacerts use it); Go 1.26.10 / 1.27.3 (CVE-2026-111943,
+    which rejects chains through those intermediates) for every Go tool,
+    tailcat included (it builds with nixpkgs' Go 1.27 again instead of its
+    private 1.27.1); Firefox 158.0.1; Electron 42.11.18 / 43.8.3 / 44.9.3;
+    uv 0.13.5 (packaged here, nixpkgs has 0.13.4: 0.13.4 drops the roots
+    from uv's own store, 0.13.5 moves `uv python install` to CPython builds
+    whose pip 26.2.2 and certifi 2026.10.19 drop them too).
+  - Node2Shell (CVE-2026-111497, Brotli decoder): Node.js 22.23.4 and
+    26.12.1 with nixpkgs' patched brotli. BeEF, the one tool here that runs
+    Node at runtime, uses Node 26 until the pin's default Node 24 is fixed.
+- Still open on this pin, pending nixpkgs' staging branch: Node.js 24.22.1
+  (the default `nodejs`, used here only at build time) and brotli 1.2.1 for
+  the system library curl, Wireshark and Python's brotli link. Rebuilding
+  either here would rebuild most of the closure (Qt WebEngine, WebKitGTK,
+  GTK4, ...) from source; the next `nix flake update` after they reach
+  nixpkgs master picks both up.
+
+Changed (latest upstream releases or branch heads):
+
+- Releases: AIS-catcher 0.70, dumphfdl 1.7.0, dumpvdl2 2.7.0, libacars
+  2.2.1, readsb 3.16.17, osmo-fl2k 0.2.1, CyberEther 1.16.2 (source build,
+  plus its new pocketfft subproject, and the release binaries), Ghidra 12.2,
+  Joern 4.0.665, pwndbg 2026.10.22, x64dbg 2026.05.27, MobSF 4.5.3 (with
+  mitmproxy-rs/mitmproxy-linux 0.12.15, yara-python-dex 1.1.0 and APKiD
+  3.2.0; lief stays 0.17.6, the newest MobSF accepts), HExHTTP 2.7, the
+  ChameleonUltra CLI's bundled xz 5.8.4.
+- Branch heads: Proxmark3 / Proxmark5 (v4.23346-211), SDR++, NFC
+  Laboratory, gqrx-scanner, pySim, OCUDU, usdr-lib, OP25, libhydrasdr
+  (1.1.3+), CRCpp, Mtk79ICAP, gr-dab, gr-m17, gr-radio_astro, SCAT (now
+  2.1.2; its build uses hatch-vcs), wifit3, WireTapper, SIPPTS, brutus,
+  Nerva, titus, whosthere, betterleaks, mic, blackbird, sparrow-wifi,
+  reFlutter, fluxion (6.32+) and BeEF's tree. brutus and whosthere now need
+  Go 1.27.
+- `airgorah` 0.9.0 (nixpkgs has 0.8.1), following RF-Swift-images after
+  v1.2.0: the GUI now drives a privileged `airgorah-agent` that must sit next
+  to it, so both are installed side by side, with ip, crunch and xterm added
+  to its PATH.
+- Following RF-Swift-images' `ubuntu_resolute` commits of 2026-10-23: every
+  environment's `go` is now Go 1.27.3 (nixpkgs' default is still 1.26) and
+  its `uv` 0.13.5, and the android environment's `ipsw` is 3.1.739 (nixpkgs
+  has 3.1.736; it now needs Go 1.27). uv and ipsw are overrides of the
+  nixpkgs packages that step aside once nixpkgs reaches those versions; until
+  then uv builds from source. The other bumps there, Ghidra 12.2 and
+  CyberEther 1.16.2, were already in.
+- Already current and unchanged: Signal Hound SDK 10_05_26, Spike 4_0_17 and
+  VSG60 2_0_5, Burp Suite 2026.9.2, Saleae Logic 2.4.48, Little Snitch
+  1.1.0, KC908 0.5.11-72, Harogic 0.55.88, sslyze 6.3.1, and the other ~150
+  commit-pinned packages, already at their upstream heads.
+- Kept on purpose: mmt-dpi (newer commits drop `update_http2_data`, which
+  5Greplay still calls), pyrit, crypto1_bs, angr 9.2.154, certsync's Certipy
+  4.8.2, OAI's asn1c and SIMDE commits, GNU Radio 4's dependency set.
+
+Fixed:
+
+- gr-ais, gr-gsm, gr-limesdr, gr-rds and gr-satellites named a branch
+  (`maint-3.10`, ...) as their `rev` with a fixed hash, which breaks as soon
+  as the branch moves (gr-rds' already had): pinned to commits. The SCAT
+  Wireshark dissector and crypto1_bs' miLazyCracker patch were fetched from
+  `master` URLs the same way and are now pinned too.
+- The flake's `rich` test-skip override now applies only where rich builds
+  from source anyway (non-default Python sets, riscv64). nixpkgs made rich a
+  build input of scons, so overriding the default one rebuilt scons, ffado,
+  PipeWire, GTK4, GStreamer, Qt and their dependents from source.
+- `overlays.default` hit infinite recursion on dsview, ad-miner, wifite2 and
+  certsync (and on the new airgorah, uv and ipsw): each overrides the nixpkgs
+  package of the same name, which callPackage resolved to the overlay's own
+  attribute. They now take it from the base package set. The environments
+  were not affected (they do not go through the overlay).
+- usdr-lib's `usdr.pc` joined `${prefix}` with absolute install dirs (and
+  put libdir under bin/); it now uses the full dirs.
+- pwndbg's .deb is now a relocatable bundle with its own ld.so, and its
+  `usr/bin/pwndbg` an absolute symlink, so the old recipe produced no
+  `bin/pwndbg`. It is installed as is (no ELF patching onto the Nix glibc),
+  with `bin/pwndbg` pointing into the store copy.
+
 ### Synced with RF-Swift-images v1.2.0
 
 Everything RF-Swift-images added between v1.1.3 and v1.2.0.

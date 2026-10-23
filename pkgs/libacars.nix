@@ -4,14 +4,14 @@
 
 stdenv.mkDerivation rec {
   pname = "libacars";
-  version = "2.2.0";
+  version = "2.2.1";
 
   src = fetchFromGitHub {
     owner = "szpajder";
     repo = "libacars";
     rev = "v${version}";
     # Build once, then replace with the hash Nix prints.
-    hash = "sha256-2n1tuKti8Zn5UzQHmRdvW5Q+x4CXS9QuPHFQ+DFriiE=";
+    hash = "sha256-nArUiGVxQFkyoZ2dECBift8yeFJOKJeVHU1FnKrJpYs=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];

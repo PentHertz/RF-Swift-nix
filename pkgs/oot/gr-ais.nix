@@ -10,7 +10,7 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "bkerler";
     repo = "gr-ais";
-    rev = "maint-3.10";
+    rev = "fd72dd564470f55eea664271a026c892c69c6784";
     hash = "sha256-Q/rSQHN5zwxIOWMK8MgXn4VVeCt+NS7i3UD/Th4SyA8=";
   };
 

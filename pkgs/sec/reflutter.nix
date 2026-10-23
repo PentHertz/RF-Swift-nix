@@ -7,14 +7,14 @@
 
 python3Packages.buildPythonApplication {
   pname = "reflutter";
-  version = "0.9.8";
+  version = "0.9.8-unstable-2026-10-15";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Impact-I";
     repo = "reFlutter";
-    rev = "1b5d688ffc00896d3c466797913a99fc846e4d38"; # "0.9.8" (PyPI 0.9.8), no git tag
-    hash = "sha256-AhdQaLIUoQU9bKr65F8CL5zeK3V9dm2rTNSpppy8mas=";
+    rev = "846a00033ef39a53502eed8b775b6699fe0fc684"; # one commit past "0.9.8" (PyPI 0.9.8); no git tags
+    hash = "sha256-uVP7AV7F28NJoPKtUIBYkKlUvo5X+pEyRfgp16tcaCQ=";
   };
 
   build-system = [ python3Packages.setuptools ];

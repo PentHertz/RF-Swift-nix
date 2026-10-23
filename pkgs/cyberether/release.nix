@@ -49,19 +49,19 @@
 }:
 
 let
-  version = "1.15.0";
+  version = "1.16.2";
   assets = {
     x86_64-linux = {
       name = "cyberether-linux-x86_64.tar.gz";
-      hash = "sha256-KWYMbhvPwPrAVAUm8P6gjRqeZ+YTMbdD3L1pT9Bdn9I=";
+      hash = "sha256-KalMzZ3SkXZkoggz/4RxinV3YmLTa1fB85ODJ2dugwc=";
     };
     aarch64-linux = {
       name = "cyberether-linux-aarch64.tar.gz";
-      hash = "sha256-oIDDeyhEvJrZmrFvQ5CUyVRPnPg7vxq0rZmWSBG2Y5M=";
+      hash = "sha256-ui4RQHAphlUpZYIVxxp4nt9Oi67IAef96FW7ttpRWtA=";
     };
     aarch64-darwin = {
       name = "cyberether-macos-arm64.tar.gz";
-      hash = "sha256-7Yt4+sKMFj8UG2lRd+w4HUP2m1xgIPGb+XAMPAy4IvM=";
+      hash = "sha256-6e2jAmTfMUT5POUkm285UyRfby15TdlrmI/4OKzxM5o=";
     };
   };
   asset = assets.${stdenv.hostPlatform.system}

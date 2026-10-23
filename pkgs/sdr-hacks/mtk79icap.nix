@@ -16,13 +16,13 @@
 
 stdenv.mkDerivation {
   pname = "mtk79icap";
-  version = "0-unstable-2026-10-16";
+  version = "0-unstable-2026-10-23";
 
   src = fetchFromGitHub {
     owner = "MtkWifiRev";
     repo = "Mtk79ICAP";
-    rev = "38221102d67191cfa129644b002a433afb44dae0";
-    hash = "sha256-Em0zTGsmFvoeaHcorNiLjPgZJTyHjQTDpSJ8knKZEA8=";
+    rev = "37a2c11e73108c0d21a064788edd13ccb61e4b97";
+    hash = "sha256-tarkNm2T+NX9HS8gudrZitQHth/fBOlqt7yYqldPOPg=";
   };
 
   # SoapyMT7921 pulls in libmt7921iq and mt7921iq_rx as a subdirectory;

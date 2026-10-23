@@ -3,13 +3,13 @@
 
 stdenv.mkDerivation {
   pname = "gqrx-scanner";
-  version = "unstable-2023-06-01";
+  version = "unstable-2026-09-05";
 
   src = fetchFromGitHub {
     owner = "neural75";
     repo = "gqrx-scanner";
-    rev = "0283ab2c9f4976e9a1e64618bacbfed926e19284";
-    hash = "sha256-fbMk76lmHs6cKcDf3fI9wxK8SK2QW3eSnh1AtNxvwfs=";
+    rev = "bbd372c79796247c77854a8e6007a33c1a3ad87d";
+    hash = "sha256-vyruT9VM2KH7tGEl6vFcQnMfuXG2HW8hw5t7HQdAHTk=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];

@@ -6,11 +6,11 @@
 
 stdenv.mkDerivation {
   pname = "x64dbg";
-  version = "snapshot-2025-03-15";
+  version = "2026.05.27";
 
   src = fetchurl {
-    url = "https://github.com/x64dbg/x64dbg/releases/download/snapshot/snapshot_2025-03-15_15-57.zip";
-    hash = "sha256-SQpCjSCcDth+0FDbbke19iaumKf2mRfJ+H8Up8U6/KA=";
+    url = "https://github.com/x64dbg/x64dbg/releases/download/2026.05.27/snapshot_2026-05-27_12-11.zip";
+    hash = "sha256-1Blm38W0NaNyeYJFMAygq3u45Ivb9IUSxvsg/MpCdpc=";
   };
 
   nativeBuildInputs = [ unzip makeWrapper ];

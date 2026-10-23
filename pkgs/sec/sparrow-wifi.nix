@@ -1,8 +1,8 @@
 { lib, python3Packages, fetchFromGitHub, makeWrapper }:
 let pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or null) names);
 in python3Packages.buildPythonApplication {
-  pname = "sparrow-wifi"; version = "unstable"; format = "other";
-  src = fetchFromGitHub { owner = "ghostop14"; repo = "sparrow-wifi"; rev = "7559b3880717c0c535abb7c23fa548cfb17b49dc"; hash = "sha256-oeDXfkdbIBHx1G+NYzHHLQ4ApAbQ+0uriC1xtb9PzYY="; };
+  pname = "sparrow-wifi"; version = "unstable-2026-10-21"; format = "other";
+  src = fetchFromGitHub { owner = "ghostop14"; repo = "sparrow-wifi"; rev = "b4f4592714791d74caf15ea4723f4daf815c1efa"; hash = "sha256-nBVcRaFc0QQZOPMyG7aHdDMizHUEjbuFg/9sK28AIoQ="; };
   nativeBuildInputs = [ makeWrapper ];
   propagatedBuildInputs = pick [ "pyqt5" "gps3" "python-dateutil" "matplotlib" "manuf" "requests" ];
   dontCheckRuntimeDeps = true; doCheck = false;

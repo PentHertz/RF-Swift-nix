@@ -6,13 +6,13 @@
 
 stdenv.mkDerivation {
   pname = "nfc-laboratory";
-  version = "3-unstable";
+  version = "3-unstable-2026-09-20";
 
   src = fetchFromGitHub {
     owner = "josevcm";
     repo = "nfc-laboratory";
-    rev = "4882c8c1e708fd79aa841b498f511f008db345d6";
-    hash = "sha256-cVka9go8lLJT15NKNuyzns4xtPEO6C5+1w6DRNnHuRo=";
+    rev = "79d1bedf02acf13e597cbfa9d61ddd96c2b4df2e";
+    hash = "sha256-jYsuD8b+TyZGJTuegnMZLtZYwG4N7j7ZNoyh9G9zrDI=";
   };
 
   nativeBuildInputs = [ cmake pkg-config qt6.wrapQtAppsHook ];

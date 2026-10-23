@@ -3,16 +3,16 @@
 
 buildGoModule {
   pname = "titus";
-  version = "unstable-2026-08-30";
+  version = "unstable-2026-10-20";
 
   src = fetchFromGitHub {
     owner = "praetorian-inc";
     repo = "titus";
-    rev = "b4f205c445c641589df71d40c665080bc8061bb7";
-    hash = "sha256-z6oJrld2lg/lI6mrfb8/YAQNRUuiFFP9RtCukioSoNM=";
+    rev = "4059973d1ed963f58ebf156f372865fb60f6cd2d";
+    hash = "sha256-kGP4UnEKh6oCla9XTalj+inqfVy+00diMhPcteg+oig=";
   };
 
-  vendorHash = "sha256-1kJeOd9laPbGBQP4hDKg5t4rVy0NqUG4QZj9LupV7+c=";
+  vendorHash = "sha256-CSJSOjBR6cZf2/ZczkFZDO8v3mO4AMArRasJLTt1yTM=";
 
   # The clone-enumerator tests shell out to `git init` (git_test.go), which is
   # absent from the sandbox PATH by default: add it for the check phase.

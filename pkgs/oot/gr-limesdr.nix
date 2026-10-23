@@ -10,7 +10,7 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "myriadrf";
     repo = "gr-limesdr";
-    rev = "gr-3.10";
+    rev = "79b4c2ee895547f1c9ad104ef8797f8300b3512e";
     hash = "sha256-7in7iNHFcGrTC7l3xzeKIQ5TX4XT1+H3vJXdNs9CV8g=";
   };
 

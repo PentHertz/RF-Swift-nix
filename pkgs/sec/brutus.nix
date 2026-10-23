@@ -3,16 +3,16 @@
 
 buildGoModule {
   pname = "brutus";
-  version = "unstable-2026-08-30";
+  version = "unstable-2026-10-14";
 
   src = fetchFromGitHub {
     owner = "praetorian-inc";
     repo = "brutus";
-    rev = "dabda04ea464be2c864d5decde30794a59948855";
-    hash = "sha256-lysFjSSCDKbaQHcnz4d+EF9eYzDTQrUL9i+XuOQIjns=";
+    rev = "7bc9e5d0ee418655af77c30b2fff9a292f1d6379";
+    hash = "sha256-JRL7gJsv2hYCGwXoGKfsS+DCuYbnnh65F9GKtrOFK54=";
   };
 
-  vendorHash = "sha256-hROEjPeX2iKs+bPLBqtjAMWl6EWSOvriZVqhXYEtPcM=";
+  vendorHash = "sha256-fFBnqZljp+ykDTtqVIS4AxdFVcd9Mmqv/oJR4LVEq5w=";
   subPackages = [ "cmd/brutus" ];
   meta = {
     description = "Credential brute-forcing tool (Praetorian)";

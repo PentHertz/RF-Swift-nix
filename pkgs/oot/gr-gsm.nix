@@ -11,7 +11,7 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "velichkov";
     repo = "gr-gsm";
-    rev = "maint-3.10-fixes";
+    rev = "f4869c982ccd423e575683b8db08fb9140ceed3b";
     hash = "sha256-9Mm6d6hMWylFbGXKBez5KZOGG/1KaOgk4EBZvgeEVHI=";
   };
 

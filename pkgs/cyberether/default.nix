@@ -84,6 +84,7 @@ let
     { name = "nanobind-2.12.0.tar.gz"; sha256 = "01f1f0cd0398743c18f33d07ae36ad410bd7f4a1e90683b508504de897d6e629"; url = "https://github.com/wjakob/nanobind/archive/refs/tags/v2.12.0.tar.gz"; }
     { name = "nlohmann_json-3.12.0.zip"; sha256 = "b8cb0ef2dd7f57f18933997c9934bb1fa962594f701cd5a8d3c2c80541559372"; url = "https://github.com/nlohmann/json/releases/download/v3.12.0/include.zip"; }
     { name = "openssl-3.0.8.tar.gz"; sha256 = "6c13d2bf38fdf31eac3ce2a347073673f5d63263398f1f69d0df4a41253e4b3e"; url = "https://www.openssl.org/source/openssl-3.0.8.tar.gz"; }
+    { name = "pocketfft-5fb931a048d4ed6e2be304bbfb608f655f3da6bf.tar.gz"; sha256 = "425d9b206d3719c1f733403fff1139b291d63676d3134e6a5ab86476cfc5db3b"; url = "https://codeload.github.com/mreineck/pocketfft/tar.gz/5fb931a048d4ed6e2be304bbfb608f655f3da6bf"; }
     { name = "pcre2-10.47.tar.bz2"; sha256 = "47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7"; url = "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2"; }
     { name = "pthreads4w-code-v3.0.0.zip"; sha256 = "b81136effb7185c77601fe2e0e6ac19bd996912e4814cebdd3010b0fac9e259b"; url = "https://downloads.sourceforge.net/project/pthreads4w/pthreads4w-code-v3.0.0.zip"; }
     { name = "libqrencode-4.1.1.tar.gz"; sha256 = "5385bc1b8c2f20f3b91d258bf8ccc8cf62023935df2d2676b5b67049f31a049c"; url = "https://github.com/fukuchi/libqrencode/archive/refs/tags/v4.1.1.tar.gz"; }
@@ -122,6 +123,7 @@ let
   builtNames = [
     "Catch2-3.4.0.tar.gz" "cpp-httplib-0.56.0.tar.gz" "fmt-11.2.0.tar.gz"
     "glm-1.0.0.tar.gz" "nanobench-4.3.11.tar.gz" "nlohmann_json-3.12.0.zip"
+    "pocketfft-5fb931a048d4ed6e2be304bbfb608f655f3da6bf.tar.gz"
     "libqrencode-4.1.1.tar.gz" "rapidyaml-0.11.1-src.tgz" "robin-map-1.4.0.tar.gz"
     "tomlplusplus-3.4.0.tar.gz" "tree-sitter-0.26.3.tar.gz"
     "tree-sitter-bash-0.25.1.tar.gz" "tree-sitter-cpp-0.23.4.tar.gz"
@@ -212,13 +214,13 @@ let
 in
 stdenv.mkDerivation {
   pname = "cyberether";
-  version = "1.15.0";
+  version = "1.16.2";
 
   src = fetchFromGitHub {
     owner = "luigifcruz";
     repo = "CyberEther";
-    rev = "v1.15.0";
-    hash = "sha256-vEdQTJdO0a4YYRcA9QLTydGGFGvnvJLAjHp7N1T8+Yg=";
+    rev = "v1.16.2";
+    hash = "sha256-1IBWqI8qMZbVMqJLcZfQvoyXp1/yWwLqru/KSLQ+SA4=";
   };
 
   nativeBuildInputs = [

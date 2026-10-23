@@ -4,13 +4,13 @@
 
 stdenvNoCC.mkDerivation {
   pname = "crcpp";
-  version = "unstable";
+  version = "unstable-2026-10-15";
 
   src = fetchFromGitHub {
     owner = "d-bahr";
     repo = "CRCpp";
-    rev = "0a0c7a8997cc82eb7a818e3286efe30c52d65be9";
-    hash = "sha256-4tIgsPujSw7/4LtnzxLr2qFoPMlZCkpQqBLalqfoatI=";
+    rev = "77c690a9ea8e7bd0c64104786f26372a66c0eeb1";
+    hash = "sha256-ACvwHaR/m3Cja8pDXpSd6KX9C8rW5rogTuYkdtZn9I8=";
   };
 
   # Header-only: expose inc/ (which contains CRC.h) as the include dir.

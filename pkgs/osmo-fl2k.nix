@@ -4,13 +4,13 @@
 
 stdenv.mkDerivation rec {
   pname = "osmo-fl2k";
-  version = "0.2.0";
+  version = "0.2.1";
 
   src = fetchFromGitHub {
     owner = "osmocom";
     repo = "osmo-fl2k";
     rev = "v${version}";
-    hash = "sha256-BvJy2W/e0k2ogzW+im9qyzyHIDtA/mkSiXwBtnG6YRw=";
+    hash = "sha256-8Q/lM7nWps12Pekat90fgk2TssO3ht5VNygTx3Rl+lE=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];

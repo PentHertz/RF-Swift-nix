@@ -1,25 +1,25 @@
 # pwndbg: the GDB plug-in / exploit-dev environment. Modern pwndbg pins a custom
 # capstone fork and a private Python venv, so instead of building from source we
-# use its official self-contained .deb (bundles gdb + python + capstone under
-# /usr/lib/pwndbg) and autoPatchelf it to the Nix libraries.
-{ lib, stdenv, fetchurl, dpkg, autoPatchelfHook, makeWrapper
-, ncurses, readline, gmp, expat, zlib, xz, python3, libedit, mpfr }:
+# use its official self-contained .deb. Since 2025 that is a relocatable bundle
+# under /usr/lib/pwndbg-gdb: gdb, python, capstone and their libraries plus its
+# own ld.so, which the launchers invoke explicitly and locate from their own
+# path. It is installed as is: patching its ELF files onto the Nix glibc would
+# mix two C libraries in one process.
+{ lib, stdenv, fetchurl, dpkg }:
 
 stdenv.mkDerivation rec {
   pname = "pwndbg";
-  version = "2024.08.29";
+  version = "2026.10.22";
 
   src = fetchurl {
     url = "https://github.com/pwndbg/pwndbg/releases/download/${version}/pwndbg_${version}_amd64.deb";
-    hash = "sha256-G3IZ8CRUUM0t3ZbefdmnFh9bSn2Aibyz9PpGOA66OcQ=";
+    hash = "sha256-eIi7mG1j/CMNKfqWvfYVK5zhI7KjsfMz0x+AaENjhIo=";
   };
 
-  nativeBuildInputs = [ dpkg autoPatchelfHook makeWrapper ];
-  buildInputs = [
-    ncurses readline gmp mpfr expat zlib xz python3 libedit stdenv.cc.cc.lib
-  ];
-  # The bundle ships many of its own .so files; ignore deps it satisfies itself.
-  autoPatchelfIgnoreMissingDeps = true;
+  nativeBuildInputs = [ dpkg ];
+
+  dontPatchELF = true;
+  dontStrip = true;
 
   unpackPhase = ''
     runHook preUnpack
@@ -27,15 +27,15 @@ stdenv.mkDerivation rec {
     runHook postUnpack
   '';
 
+  # usr/bin/pwndbg is an absolute symlink to /usr/lib/pwndbg-gdb/bin/pwndbg;
+  # point bin/ at the store copy instead (the launcher finds the bundle from
+  # its own resolved path).
   installPhase = ''
     runHook preInstall
-    mkdir -p $out
+    mkdir -p $out/bin
     cp -r unpacked/usr $out/
-    # /usr/bin/pwndbg is the entry launcher into the bundled gdb.
-    if [ -e "$out/usr/bin/pwndbg" ]; then
-      mkdir -p $out/bin
-      ln -sf $out/usr/bin/pwndbg $out/bin/pwndbg
-    fi
+    rm $out/usr/bin/pwndbg
+    ln -s $out/usr/lib/pwndbg-gdb/bin/pwndbg $out/bin/pwndbg
     runHook postInstall
   '';
 

@@ -4,13 +4,13 @@
 
 stdenv.mkDerivation rec {
   pname = "ais-catcher";
-  version = "0.60";
+  version = "0.70";
 
   src = fetchFromGitHub {
     owner = "jvde-github";
     repo = "AIS-catcher";
     rev = "v${version}";
-    hash = "sha256-Y+0DTpcwViaTOXgPk6PnoJESOPNaeoiG9m7sYGfpcSY=";
+    hash = "sha256-YDkqIoW3DDwUfAJftvfnmsIQYCq9ujYrB8RvZRiIexg=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];

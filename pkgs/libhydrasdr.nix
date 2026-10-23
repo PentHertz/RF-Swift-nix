@@ -5,14 +5,14 @@
 
 stdenv.mkDerivation {
   pname = "libhydrasdr";
-  version = "unstable";
+  version = "1.1.3-unstable-2026-09-11";
 
   # libhydrasdr lives in the hydrasdr-host repo (like libairspy in airspyone_host).
   src = fetchFromGitHub {
     owner = "hydrasdr";
     repo = "hydrasdr-host";
-    rev = "d52f1fe695590fc4ab94ffdb0d13d9c07171a581";
-    hash = "sha256-1kG5jkzHLlpfwikvf6Qs9Uoxxy4t7sIFj7sMVZUgp0U=";
+    rev = "16942cbcbde47198abc6b7968c700ed0cbb8cc87";
+    hash = "sha256-1dOpDtc5MzSdOcuSj2R2EEULjPlCD+PNvx/Q9/HBRTI=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];

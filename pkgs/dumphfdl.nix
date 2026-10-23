@@ -4,13 +4,13 @@
 
 stdenv.mkDerivation rec {
   pname = "dumphfdl";
-  version = "1.4.1";
+  version = "1.7.0";
 
   src = fetchFromGitHub {
     owner = "szpajder";
     repo = "dumphfdl";
     rev = "v${version}";
-    hash = "sha256-IMl/O7MMr8U/plsjqRPze15+dCLGPkEZx93reXOe5q8=";
+    hash = "sha256-kbUCHddhkM3Cj39ac5GQM3hCihRERnzWdELtnHjaIgg=";
   };
 
   nativeBuildInputs = [ cmake pkg-config ];

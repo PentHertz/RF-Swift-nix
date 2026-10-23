@@ -7,17 +7,26 @@
 
 stdenv.mkDerivation {
   pname = "usdr-lib";
-  version = "unstable-2025";
+  version = "unstable-2026-10-23";
 
   src = fetchFromGitHub {
     owner = "wavelet-lab";
     repo = "usdr-lib";
-    rev = "069df210e6db5716726ad8e55dfcc84a1942cd4b";
-    hash = "sha256-e20GG2hCuMhnVs0GxQz5gBkBGObOy9ZZ/jiaVdxSBco=";
+    rev = "f4ff96d59aa13e6aea45108e16fb95a4c69d887c";
+    hash = "sha256-lWNRtfXAWnubXZshCqpgIihmvw/pIy1XgelyBiSTPP8=";
   };
 
   # CMakeLists.txt lives in src/, not the repo root.
   cmakeDir = "../src";
+
+  # usdr.pc.in prefixes ${prefix} to the (absolute, under Nix) install dirs and
+  # puts libdir under bin/; use the full dirs instead.
+  postPatch = ''
+    substituteInPlace src/cmake/usdr.pc.in \
+      --replace-fail 'exec_prefix=''${prefix}/@CMAKE_INSTALL_BINDIR@' 'exec_prefix=''${prefix}' \
+      --replace-fail 'libdir=''${exec_prefix}/@CMAKE_INSTALL_LIBDIR@' 'libdir=@CMAKE_INSTALL_FULL_LIBDIR@' \
+      --replace-fail 'includedir=''${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/usdr' 'includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@/usdr'
+  '';
 
   nativeBuildInputs = [ cmake pkg-config (python3.withPackages (ps: [ ps.pyyaml ])) ];
   buildInputs = [ libusb1 soapysdr ];

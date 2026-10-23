@@ -16,7 +16,7 @@ let
   # miLazyCracker's patch adapts crypto1_bs's Makefile/paths. It was authored
   # against crypto1_bs commit 89de1ba5, so pin to that.
   crypto1bsPatch = fetchurl {
-    url = "https://raw.githubusercontent.com/nfc-tools/miLazyCracker/master/crypto1_bs.diff";
+    url = "https://raw.githubusercontent.com/nfc-tools/miLazyCracker/b4f0d35df0da8ec8f06e7a285099dbf0978d0ad2/crypto1_bs.diff";
     hash = "sha256-e32DA3p6TkLeFNPcMaFWqG/ho/jjOs/gLUx+5by0IVU=";
   };
 in

@@ -12,7 +12,7 @@ let
     hash = "sha256-81sO0MOyLJhSIgJElwQGqDB0dF3lAChDzuxhHad1m+Q=";
   };
   scat = fetchurl {
-    url = "https://raw.githubusercontent.com/PentHertz/scat/refs/heads/master/wireshark/scat.lua";
+    url = "https://raw.githubusercontent.com/PentHertz/scat/df7cfa4c8011ddd6d7e17388a903442c79c959a3/wireshark/scat.lua";
     hash = "sha256-0iC5P+6zWvzeUpBxTt2XIQc2lqviXf9v/12l1VW5L3k=";
   };
 in

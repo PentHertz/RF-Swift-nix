@@ -3,16 +3,16 @@
 
 buildGoModule {
   pname = "whosthere";
-  version = "unstable-2026-08-30";
+  version = "unstable-2026-10-16";
 
   src = fetchFromGitHub {
     owner = "ramonvermeulen";
     repo = "whosthere";
-    rev = "7e306d409f357e7e7280059c351b37edcc60fe33";
-    hash = "sha256-9dLwmQW7ta5f/KjCi97rZs2Sz79UWlZN4zGiK/i2t2A=";
+    rev = "dce2f9e3a1549484c72841054f427d921e933f0e";
+    hash = "sha256-rh+GXeTWdCcqmanlBtb1OG7UjzQFi/8d8U+bansRAuo=";
   };
 
-  vendorHash = "sha256-V+NKo5NKFBU2t607yBBVfUNyeU+9Tmu4dTljhtEpkrc=";
+  vendorHash = "sha256-f4nGolvYdJGctTkREWPVcqloQrbBjVjwXagGwjv0jB0=";
 
   meta = {
     description = "ARP-based local network host discovery CLI";

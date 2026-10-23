@@ -9,13 +9,13 @@ let
 in
 stdenv.mkDerivation {
   pname = "wiretapper";
-  version = "unstable-2026-08-30";
+  version = "unstable-2026-09-11";
 
   src = fetchFromGitHub {
     owner = "h9zdev";
     repo = "WireTapper";
-    rev = "7e43d6a2ed06faf19e130f7dfabe0ab87638b909";
-    hash = "sha256-gz4hFxLIObxiJ3OPFfpvXQfqcVhvlHa8L/AmNVXWnoY=";
+    rev = "395bb9348f9c9458cb0b7994623c4c5ae937b544";
+    hash = "sha256-wm7hNN2LMTkIbJ/RHT0sWpQsUdZITEkzVxcjRT+a+5w=";
   };
 
   nativeBuildInputs = [ makeWrapper ];

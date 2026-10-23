@@ -84,12 +84,12 @@ in
   inherit libiio soapysdr-with-plugins;
 }).overrideAttrs (old: {
   pname = "sdrpp-rfswift";
-  version = "unstable-2026-07-05";
+  version = "unstable-2026-10-22";
   src = fetchFromGitHub {
     owner = "AlexandreRouma";
     repo = "SDRPlusPlus";
-    rev = "8c9f5ee8fe405775bfcd62c8c8f8c0fc928a64af";
-    hash = "sha256-P5wFOqdjRQTzUyI7pPaO1cYj3QZSeu5YZsl2qKou4Is=";
+    rev = "f10fb98af8b80de01de94e60c17608e4281e2515";
+    hash = "sha256-kNHEFcphJbZ4xwgKeORtS+8Li7Qs0uQuP0yY4fFPVH0=";
   };
   # The fork adds a HydraSDR source module needing libhydrasdr. On Darwin,
   # nixpkgs' rtaudio (pulled in by the audio source/sink modules) advertises

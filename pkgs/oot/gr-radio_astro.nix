@@ -8,8 +8,8 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "WVURAIL";
     repo = "gr-radio_astro";
-    rev = "5d23276e8dba8b10ef58e8c6dfe2bd1f628f31a1";
-    hash = "sha256-LNDqoDkdk5qoVr2uAWc6mbm+ZSjNZkRpMjTF9rznME8=";
+    rev = "ece44e158429325aa778b85bd3fd865f5b8e378e";
+    hash = "sha256-9YLqNCQpALCC8/GdCN0vQJx3FgxahmVX9rRydNDFh7w=";
   };
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];

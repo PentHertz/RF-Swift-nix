@@ -80,8 +80,8 @@ automates.
   (`--version=branch` to follow a branch head instead of a tag.)
 - Just compute a hash for a known source:
   ```
-  nix run nixpkgs#nix-prefetch-github -- wiedehopf readsb --rev v3.14.1623
-  nix run nixpkgs#nurl -- https://github.com/wiedehopf/readsb v3.14.1623
+  nix run nixpkgs#nix-prefetch-github -- wiedehopf readsb --rev v3.16.17
+  nix run nixpkgs#nurl -- https://github.com/wiedehopf/readsb v3.16.17
   ```
 
 ### Changing a package's version or revision

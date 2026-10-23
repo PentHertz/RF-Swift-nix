@@ -8,13 +8,13 @@
 
 gnuradioPackages.mkDerivation {
   pname = "op25";
-  version = "master";
+  version = "unstable-2026-10-21";
 
   src = fetchFromGitHub {
     owner = "boatbod";
     repo = "op25";
-    rev = "71abcd0ead32f86f51615ea6cc8a6a4dba4c949a";
-    hash = "sha256-PfMLhd4FiKr8EN8444yms+0s4Hv0C46rggdeth3pO0Q=";
+    rev = "d294cd9e7a02b54001008d60690434af0529a0eb";
+    hash = "sha256-6HJ0wX2NjmO5AaVgWz69wPVxahnmopkX5v09TIVeOp8=";
   };
 
   nativeBuildInputs = [ cmake pkg-config cppunit python3Packages.pybind11 makeWrapper ];

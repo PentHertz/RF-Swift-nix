@@ -6,14 +6,14 @@ let
 in
 python3Packages.buildPythonApplication {
   pname = "sippts";
-  version = "4-unstable";
+  version = "4-unstable-2026-09-14";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Pepelux";
     repo = "sippts";
-    rev = "f0b3851f1f471a11c9ee272f76f3dfa5bec9305c";
-    hash = "sha256-QAYhoeH/hEPaAPsyTD88NJjRko8IorgyFXudpp4zjZs=";
+    rev = "44568c86cff5d04ea363e787cdb0d2bffde9aa32";
+    hash = "sha256-XZW/bCKvZ4gUr+CF87IDopk7BbTNnqlYMsjP6IPCZH8=";
   };
 
   build-system = [ python3Packages.setuptools ];

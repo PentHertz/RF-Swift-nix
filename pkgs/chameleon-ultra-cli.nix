@@ -7,25 +7,26 @@
 let
   pick = names: lib.filter (x: x != null) (map (n: python3Packages.${n} or null) names);
   # software/src FetchContent-pulls xz (liblzma, for hardnested's compressed
-  # tables) from GitHub; the build sandbox has no network, so hand CMake the
-  # same tag as a pre-fetched source.
+  # tables) from GitHub; the build sandbox has no network, so hand CMake a
+  # pre-fetched source. Upstream asks for v5.8.1; this is the latest release
+  # of the same 5.8 series.
   xzSrc = fetchFromGitHub {
     owner = "tukaani-project";
     repo = "xz";
-    tag = "v5.8.1";
-    hash = "sha256-vGUNoX5VTM0aQ5GmBPXip97WGN9vaVrQLE9msToZyKs=";
+    tag = "v5.8.4";
+    hash = "sha256-C4D4MB/1Pj57IUrLFkrf+cLs2rjtVO0V5uIRFORyidg=";
   };
 in
 python3Packages.buildPythonApplication {
   pname = "chameleon-ultra-cli";
-  version = "2-unstable";
+  version = "2-unstable-2026-10-07";
   format = "other";
 
   src = fetchFromGitHub {
     owner = "RfidResearchGroup";
     repo = "ChameleonUltra";
-    rev = "0c1d5791b46e8ac1a87cb8e356f180b1394fb827";
-    hash = "sha256-wUkw6uM+XPRgODRElJmSZM3AbD0X2balRgEVrn5V6V8=";
+    rev = "5c99d4a39b424cc67ae82bbcfc8ba5ec8f69bf9c";
+    hash = "sha256-fJnTt+YLkpLUht855EumN5eg8RfUsUMPRHTBnEwEdKE=";
   };
 
   nativeBuildInputs = [ makeWrapper cmake ];

@@ -152,6 +152,14 @@ RULES
   ## --- Consolidated udev rules for devices whose package ships none ------
   rfswift-udev-rules = callPackage ./rfswift-udev-rules.nix { };
 
+  ## --- Baseline toolchains (common-packages.nix), at the images' versions --
+  # Go 1.27 (the images install 1.27.3); nixpkgs' default `go` is still 1.26.
+  go = if lib.versionAtLeast pkgs.go.version "1.27" then pkgs.go else go_1_27;
+  # Overrides of a nixpkgs package take it from `pkgs` explicitly: through
+  # overlays.default, callPackage would hand them this set's own attribute
+  # (infinite recursion).
+  uv = callPackage ./uv.nix { inherit (pkgs) uv; };
+
   ## --- Network transport / tunnelling ----------------------------------
   tailcat = callPackage ./tailcat.nix { };
   # Little Snitch for Linux (proprietary, from the images core build).
@@ -172,7 +180,7 @@ RULES
   ## PACKAGE-MAINTENANCE: INSERT BEFORE
 
   ## --- Hardware (PentHertz DSView .deb, opt-in) -------------------------
-  dsview = callPackage ./dsview.nix { };
+  dsview = callPackage ./dsview.nix { inherit (pkgs) dsview; };
   saleae-logic2 = callPackage ./saleae-logic2.nix { };
   hydranfc-sniffer-decoder = callPackage ./hydranfc-decoder.nix { };
   kc908 = callPackage ./kc908.nix { };
@@ -626,11 +634,12 @@ RULES
   autorecon = callPackage ./sec/autorecon.nix { };
   mobsf = callPackage ./mobsf { };
   reflutter = callPackage ./sec/reflutter.nix { };
+  ipsw = callPackage ./ipsw.nix { inherit (pkgs) ipsw; };
 
   ## --- Active Directory (source Python) --------------------------------
   targetedkerberoast = callPackage ./sec/targetedkerberoast.nix { };
   # nixpkgs' recipe moved to 1.9.0 with the images' Python 3.14 fix.
-  ad-miner = callPackage ./sec/ad-miner.nix { };
+  ad-miner = callPackage ./sec/ad-miner.nix { inherit (pkgs) ad-miner; };
 
   ## --- Hardware: RF Swift's serial baud-rate finder, ChipWhisperer -------
   baudrate = callPackage ./baudrate.nix { };
@@ -656,7 +665,13 @@ RULES
   fluxion = callPackage ./sec/fluxion.nix { };
   # BeEF: Ruby/bundler app (gem closure from bundlerEnv, gemset.nix pinned in
   # pkgs/beef/). Runs as a service behind rogue-AP setups in the wifi env.
-  beef = callPackage ./beef { };
+  # Node2Shell (CVE-2026-111497, Brotli decoder): until the pin carries Node.js
+  # 24.22.1, the default nodejs links the unpatched shared brotli, while
+  # nixpkgs' nodejs_26 gets the patched one. BeEF is the one tool here that
+  # runs Node at runtime (on its PATH), so give it the fixed build.
+  beef = callPackage ./beef {
+    nodejs = if lib.versionAtLeast pkgs.nodejs.version "24.22.1" then pkgs.nodejs else pkgs.nodejs_26;
+  };
   fern-wifi-cracker = callPackage ./sec/fern-wifi-cracker.nix { reaver = pkgs.reaverwps-t6x; };
   wacker = callPackage ./sec/wacker.nix { };
   wifipumpkin3 = callPackage ./sec/wifipumpkin3.nix { };
@@ -666,9 +681,11 @@ RULES
   wpa-sycophant = callPackage ./sec/wpa-sycophant.nix { };
   eap-buster = callPackage ./sec/eap-buster.nix { };
   # kimocoder's master, as the images install it (nixpkgs has the 2.7.0 release).
-  wifite2 = callPackage ./sec/wifite2.nix { };
+  wifite2 = callPackage ./sec/wifite2.nix { inherit (pkgs) wifite2; };
   # USB Wi-Fi auditor with its own user-space drivers (wifi/wifi_basic images).
   wifit3 = callPackage ./sec/wifit3.nix { };
+  # 0.9 (GUI + privileged agent), as the images install it; nixpkgs has 0.8.1.
+  airgorah = callPackage ./sec/airgorah.nix { inherit (pkgs) airgorah; };
 
   ## --- OSINT / recon extra (source Python) -----------------------------
   toutatis = callPackage ./sec/toutatis.nix { };
@@ -684,7 +701,7 @@ RULES
   socketcand = callPackage ./sec/socketcand.nix { };
   lsassy = callPackage ./sec/lsassy.nix { };
   bloodyad = callPackage ./sec/bloodyad.nix { };
-  certsync = callPackage ./sec/certsync.nix { };
+  certsync = callPackage ./sec/certsync.nix { inherit (pkgs) certsync; };
 
   ## --- Web / network exploitation (source Python) ----------------------
   sstimap = callPackage ./sec/sstimap.nix { };
@@ -709,7 +726,8 @@ RULES
   bluesploit = callPackage ./sec/bluesploit.nix { };
   whisperpair = callPackage ./sec/whisperpair.nix { };
   breaktooth = callPackage ./sec/breaktooth.nix { };
-  blerp = callPackage ./sec/blerp.nix { };
+  # The environment's uv, not nixpkgs' older one.
+  blerp = callPackage ./sec/blerp.nix { inherit uv; };
   sweyntooth = callPackage ./sec/sweyntooth.nix { };
 
   ## --- Network image tools not in nixpkgs (source builds) --------------------
@@ -718,8 +736,9 @@ RULES
   webcopilot = callPackage ./sec/webcopilot.nix { };
   mbtget = callPackage ./sec/mbtget.nix { };
   snitch = callPackage ./sec/snitch.nix { };
-  whosthere = callPackage ./sec/whosthere.nix { };
-  brutus = callPackage ./sec/brutus.nix { };
+  # Both need Go >= 1.27 since their 2026-10 upstream commits.
+  whosthere = callPackage ./sec/whosthere.nix { buildGoModule = buildGo127Module; };
+  brutus = callPackage ./sec/brutus.nix { buildGoModule = buildGo127Module; };
   nerva = callPackage ./sec/nerva.nix { buildGoModule = buildGo127Module; };
   mic = callPackage ./sec/mic.nix { };
   betterleaks = callPackage ./sec/betterleaks.nix { };

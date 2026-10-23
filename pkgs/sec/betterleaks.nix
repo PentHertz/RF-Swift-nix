@@ -3,16 +3,16 @@
 
 buildGoModule {
   pname = "betterleaks";
-  version = "unstable-2026-08-30";
+  version = "unstable-2026-10-20";
 
   src = fetchFromGitHub {
     owner = "betterleaks";
     repo = "betterleaks";
-    rev = "2ba7943682b82a3659a89dae8fc680de1ef6b781";
-    hash = "sha256-72G3fcZz3j9qyqK9PN39+CRm4/Cy/p1lIXEmyCMZkHQ=";
+    rev = "49d0a87e9d3a4f729d88d828e6773a57bb4409b3";
+    hash = "sha256-p08mIkAyjlwgC5lGKysrrkdkOWUiCl+sF+hSSvmV9D4=";
   };
 
-  vendorHash = "sha256-Nr6l1AULi6pjUCy4RVQZT02Kd9yRkJLZHWCbWpCoDDY=";
+  vendorHash = "sha256-SspPUCdruUMGPNNyLZZq5DU12ls3DEXFKDeShb9gm54=";
 
   # detect_test.go's TestFromGit / TestFromGitStaged shell out to `git`, which is
   # absent from the sandbox PATH by default: add it for the check phase.

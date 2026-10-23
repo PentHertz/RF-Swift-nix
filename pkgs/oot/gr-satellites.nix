@@ -9,7 +9,7 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "daniestevez";
     repo = "gr-satellites";
-    rev = "maint-3.10";
+    rev = "f663ee4c8c55e713cef0ce7f10c640452adfcd5a";
     hash = "sha256-CZEY0mvpgpboZASJDbmu4NPyBrw4vGO1ApJAx5ozTDo=";
   };
 

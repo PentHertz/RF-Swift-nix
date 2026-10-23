@@ -47,11 +47,11 @@ let
 
         mitmproxy-linux = self.buildPythonPackage {
           pname = "mitmproxy-linux";
-          version = "0.12.8";
+          version = "0.12.15";
           format = "wheel";
           src = fetchurl {
-            url = "https://files.pythonhosted.org/packages/76/a8/0fa9fe5fe10e7410a21959c5438e596a92677b49d331a3dcb2dde14af446/mitmproxy_linux-0.12.8-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
-            hash = "sha256-+8slMW6V0LK1ztTgzD2Q/bG3FpMAoAXMeTOYlNZlNjo=";
+            url = "https://files.pythonhosted.org/packages/fa/ef/32bf79a030d7d0775c31d0c866d68030da386d738be284e8527c0ffa230e/mitmproxy_linux-0.12.15-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
+            hash = "sha256-tbHCd5gLo33kryHaGf1nRm4Ove+6fAwyXWydSMMqlPg=";
           };
           nativeBuildInputs = [ autoPatchelfHook ];
           buildInputs = [ stdenv.cc.cc.lib ];
@@ -59,11 +59,11 @@ let
         };
         mitmproxy-rs = self.buildPythonPackage {
           pname = "mitmproxy-rs";
-          version = "0.12.8";
+          version = "0.12.15";
           format = "wheel";
           src = fetchurl {
-            url = "https://files.pythonhosted.org/packages/d1/87/ea3b0050724b700d6fbb26c05be9a6e4b2c9c928218d48dacabe2ed56f03/mitmproxy_rs-0.12.8-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
-            hash = "sha256-FOojbQlQqzXWZ7eLX+FdQ+c0XhZuIhRGJKEoPtx4RD4=";
+            url = "https://files.pythonhosted.org/packages/83/d4/6ebfa9950727c8da2a750e0aea64518ac9ed237599cdf3f6d54d01ce1110/mitmproxy_rs-0.12.15-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
+            hash = "sha256-37Nkq8cioMVQmQR/zcKYfETUlup/WuGZojgmjeGwnRU=";
           };
           nativeBuildInputs = [ autoPatchelfHook ];
           buildInputs = [ stdenv.cc.cc.lib ];
@@ -178,11 +178,11 @@ let
   # autopatch its shared object against the Nix runtime libraries.
   yara-python-dex = pyp.buildPythonPackage {
     pname = "yara-python-dex";
-    version = "1.0.7";
+    version = "1.1.0";
     format = "wheel";
     src = fetchurl {
-      url = "https://files.pythonhosted.org/packages/d1/29/86777747aa5b662e02e07f581ff69af45b7d2b6a26906fb48152d2e7b678/yara_python_dex-1.0.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
-      hash = "sha256-CzXVOCW9YD4JU/Szj1yQsvO/iYt8SLc4l8I8mL31gyY=";
+      url = "https://files.pythonhosted.org/packages/73/9c/fdbbba84ca1b6a90f93b21b0f982175a51f6feebffd9467d0dc6cd58297d/yara_python_dex-1.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl";
+      hash = "sha256-rbavBm2Z6DvmnRbrnquNDG3IaYQrif3WZgfYPBQbwJE=";
     };
     nativeBuildInputs = [ autoPatchelfHook ];
     buildInputs = [ stdenv.cc.cc.lib ];
@@ -191,11 +191,11 @@ let
 
   apkid = pyp.buildPythonPackage {
     pname = "apkid";
-    version = "3.1.0";
+    version = "3.2.0";
     format = "setuptools";
     src = fetchurl {
-      url = "https://files.pythonhosted.org/packages/0b/fb/cb4cdbcb1c1dd2f59f38a0505923cdc2304b6efe9aacc87e5b383e325b7d/apkid-3.1.0.tar.gz";
-      hash = "sha256-ix8hhOG4jUKsYfYWyJvyIu8qYVcPB2D/EVziQRMega8=";
+      url = "https://files.pythonhosted.org/packages/f5/16/f354c98176e0e60e68ba5e8e4748063c43287d40482a6ccfd50acabd3c5f/apkid-3.2.0.tar.gz";
+      hash = "sha256-6BLPNiZyRQ8llBs6OJdMjpnW5Z4JHQoEesBWd8Kw0WI=";
     };
     propagatedBuildInputs = [ yara-python-dex ];
     doCheck = false;
@@ -264,13 +264,13 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "mobsf";
-  version = "4.5.2";
+  version = "4.5.3";
 
   src = fetchFromGitHub {
     owner = "MobSF";
     repo = "Mobile-Security-Framework-MobSF";
     rev = "v${version}";
-    hash = "sha256-zICRuK5NI0aPHSW7GAcFXAuLtrbckzRI/0RHJJmRFhw=";
+    hash = "sha256-DVyRBBiXPDkxxgcdo0rfZGeaMqCpvYynFC1vS6p7U6s=";
   };
 
   nativeBuildInputs = [ makeWrapper ];

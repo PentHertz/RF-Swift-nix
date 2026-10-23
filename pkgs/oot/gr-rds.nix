@@ -9,8 +9,8 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "bastibl";
     repo = "gr-rds";
-    rev = "maint-3.10";
-    hash = "sha256-2MDSSrmihurC2//PQQM3PgoSQOK+D2blmu3FJ6cZtxE=";
+    rev = "a4fae2787bc1115c04721d49bee39cfa2c3adcb2";
+    hash = "sha256-0tLYZDSZ3rQmj+kEQBObcARoDfWxpGKJ5/VLEWkaE+Y=";
   };
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];

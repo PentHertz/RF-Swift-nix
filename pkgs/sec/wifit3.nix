@@ -16,14 +16,14 @@
 
 python3Packages.buildPythonApplication {
   pname = "wifit3";
-  version = "0.5.0-unstable-2026-10-18";
+  version = "0.5.0-unstable-2026-10-23";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "derv82";
     repo = "wifit3";
-    rev = "5638cabbfbe80a8bfef1f545842dec383eb39225";
-    hash = "sha256-DM/y6FPnEHZRTk+/f6FzVLgl2Xf74pn25Zr4jRGHSGY=";
+    rev = "8d7816a920c838ed6b0dba2889a07f00b9b92ea9";
+    hash = "sha256-jnoi85o0QZy412Za8aBnv2VAviJOlWTjTdKA6jZdH4o=";
   };
 
   # libwdi's wdi-simple.exe (WinUSB installer), 14 MB used by the Windows

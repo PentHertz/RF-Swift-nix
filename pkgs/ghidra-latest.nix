@@ -4,12 +4,12 @@
 
 stdenv.mkDerivation rec {
   pname = "ghidra-latest";
-  version = "12.1.4";
-  releaseDate = "20260921";
+  version = "12.2";
+  releaseDate = "20261016";
 
   src = fetchzip {
     url = "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${version}_build/ghidra_${version}_PUBLIC_${releaseDate}.zip";
-    hash = "sha256-ZD4Vs1i7BMvrneAbAiOc7F9iBj64Rbom+PaVO//TzK8=";
+    hash = "sha256-ueJ5zUytJsXR6S3o/s/Qgp+MBWKFKsu3jhWQstTpqeI=";
   };
 
   nativeBuildInputs = [ makeWrapper autoPatchelfHook ];

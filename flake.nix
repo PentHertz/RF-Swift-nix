@@ -325,7 +325,18 @@
             # from source on the CPython 3.14 pin - environment-sensitive, not our
             # code. rich is an extremely common transitive dep (angr/reversing and
             # many CLIs), so skip its check phase like the rest.
-            rich = pyprev.rich.overridePythonAttrs (_: { doCheck = false; });
+            #
+            # Only where rich builds from source anyway: the non-default Python
+            # sets (3.12 etc.) and riscv64. The default 3.14 rich comes from
+            # cache.nixos.org, and since nixpkgs made it a build input of scons
+            # (2026-10) overriding it there changes scons, ffado, pipewire,
+            # gtk4, gstreamer, Qt and their dependents, all of which would then
+            # rebuild from source.
+            rich =
+              if pyprev.python.pythonVersion != final.python3.pythonVersion
+                || final.stdenv.hostPlatform.isRiscV
+              then pyprev.rich.overridePythonAttrs (_: { doCheck = false; })
+              else pyprev.rich;
             # psycopg's test suite spins up a real PostgreSQL server and connects
             # over a unix socket; in the Nix sandbox that connection fails
             # ("connection to server on socket .../.s.PGSQL.5432 failed"), aborting

@@ -3,16 +3,16 @@
 
 buildGoModule {
   pname = "mic";
-  version = "unstable-2026-08-30";
+  version = "unstable-2026-09-05";
 
   src = fetchFromGitHub {
     owner = "djnnvx";
     repo = "mic";
-    rev = "b11226c70712291699e90011ef47f25bcb121c23";
-    hash = "sha256-wUiLKi0bnY6Sbv5TqAH34ZzcWE3Mq737XGw2u7DEgec=";
+    rev = "e13ecc54d93872b9fc414a6b395cf41935ac1ceb";
+    hash = "sha256-tZVr+CmG7UohtKc+um5lG8uG+s2MVP2vv2Yhe7dH+p0=";
   };
 
-  vendorHash = "sha256-LP4mzU5ayrOBM2eTVxadu0zTzSLebhonrPvHRaZq3UA=";
+  vendorHash = "sha256-JuP7Ghfgbf+2BGmrC7cW0Ik/5lRVVowiBkXEaUPOnM4=";
 
   meta = {
     description = "Minimal interface capture / network utility";

@@ -1,5 +1,7 @@
 # MMT-DPI: Montimage's deep-packet-inspection SDK (open source), the dependency
-# 5Greplay builds against.
+# 5Greplay builds against. Kept at this commit: later mmt-dpi (checked up to
+# 3c1e94a6, 2026-10-23) no longer exports update_http2_data, which 5Greplay's
+# forward_packet.c still calls, so 5Greplay stops linking.
 { lib, stdenv, fetchFromGitHub, libpcap, libxml2, libconfuse }:
 
 stdenv.mkDerivation {

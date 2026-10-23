@@ -10,9 +10,9 @@ gnuradioPackages.mkDerivation {
   src = fetchFromGitHub {
     owner = "M17-Project";
     repo = "gr-m17";
-    rev = "36267b114b41920b3b62d9545afe7d7c854801bf";
+    rev = "09102c857190361d9ef1fb7ad76e42bd67a0905a";
     fetchSubmodules = true;
-    hash = "sha256-cLSCbpo7BjIPw2JeGNfaOKVh1zCVjDCebQBCWI9Xmr0=";
+    hash = "sha256-ViqYYZKVFeyJrBW/FkzuYPB3C6v+VD22rkSh6gwSql4=";
   };
 
   nativeBuildInputs = [ cmake pkg-config python3Packages.pybind11 ];

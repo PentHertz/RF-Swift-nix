@@ -6,13 +6,13 @@
 
 gnuradioPackages.mkDerivation {
   pname = "gr-dab";
-  version = "master";
+  version = "unstable-2026-10-06";
 
   src = fetchFromGitHub {
     owner = "andrmuel";
     repo = "gr-dab";
-    rev = "fdf26cb38ff931dcb297cc03cbe8d43f7360fbd8";
-    hash = "sha256-tb6Eexsdqmwva7O6hnjuIPo8RkfZYsP22wTE2+LqzGQ=";
+    rev = "77b4fc4b1f5434b5f50163a5e96a5d438cefdeec";
+    hash = "sha256-79FlW4BaY2nHXyaes3okdbeDGbU1J8aCO0swdBcurec=";
   };
 
   nativeBuildInputs = [ cmake pkg-config perl python3Packages.pybind11 ];

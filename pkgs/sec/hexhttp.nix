@@ -5,14 +5,14 @@
 
 python3Packages.buildPythonApplication {
   pname = "hexhttp";
-  version = "2.5";
+  version = "2.7";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "c0dejump";
     repo = "HExHTTP";
-    rev = "a70345241f017f9b841c85472feae4237b4584cb";
-    hash = "sha256-s2ZPL57Oz1Lt1JmJqlsmWzDWmws6/5NEduGkcftcTOU=";
+    rev = "20df13b4ce17a88b2d34d39603246d7fbb1ef780";
+    hash = "sha256-TeFCYYUmheCuFcJYHO3uxRe9iIsZ3O2rorX3q04JEH8=";
   };
 
   # pyproject.toml only lists packages (packages.find), so the wheel misses the

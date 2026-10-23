@@ -25,13 +25,13 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "blackbird";
-  version = "unstable-2025-07-13";
+  version = "unstable-2026-10-17";
 
   src = fetchFromGitHub {
     owner = "antoniaci"; # github.com/p1ngul1n0/blackbird redirects here
     repo = "blackbird";
-    rev = "b45505080ef51bb3ef52dc29879ee6bef31e5b94";
-    hash = "sha256-pgA7V+WpSwn2mA92W5r7h4qGHFXay8/CVnWOVjRy/40=";
+    rev = "c8329b2e83f20e3f74b218e68200389d838a6832";
+    hash = "sha256-0EvU8tirERhg+oXOzOqkNtsXDXy36m+nu4t3xN/5IAo=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
