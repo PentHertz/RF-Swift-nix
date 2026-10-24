@@ -206,7 +206,10 @@ RULES
   # nixpkgs' source-built Ghidra rather than drop Ghidra from the environment.
   ghidra = if pkgs.stdenv.hostPlatform.isLinux then ghidra-latest else pkgs.ghidra;
   joern = callPackage ./joern.nix { };
-  angr = callPackage ./angr.nix { };
+  # nixpkgs' angr suite is consistent again (angr/cle/pyvex/archinfo 10.0.4,
+  # claripy and ailment merged into angr) and supports pycparser 3.00, so the
+  # former 9.2.154 downgrade is gone. nixpkgs only has it as a Python module.
+  angr = pkgs.python3Packages.angr;
   # Use upstream's preferred WoW64 package. Unlike the deprecated
   # wineWowPackages variant this is served by cache.nixos.org for our pin,
   # avoiding a large local Wine build when realising `reversing`.

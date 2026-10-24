@@ -8,6 +8,40 @@ Keep a Changelog (https://keepachangelog.com). Dates are ISO-8601.
 First development line of the RF Swift Nix engine flake, tracking the RF Swift
 binary's v4.0.0-dev.
 
+### Build fixes for the 2026-10-23 pin (2026-10-24)
+
+The 75ba8332 pin broke bluetooth, hardware, network, reversing, sdr_full,
+sdr_hacks, sdr_light and the four telecom environments in the cache builds.
+
+Fixed:
+
+- pyqt6 on macOS (GNU Radio, pyqtgraph, URH, gqrx, nanovna-saver, ...):
+  `QtCore.abi3.so` failed to load (`symbol not found in flat namespace
+  __ZN13QPyTableRange16staticMetaObjectE`). qtbase 6.12's Darwin
+  `include/QtCore/*.h` are `#include_next` forwarders into QtCore.framework,
+  which moc cannot follow when `<qtbase>/include` precedes `-F<qtbase>/lib`,
+  so QT_VERSION was undefined while moc ran and it skipped
+  qpycore_qrangemodel.h, the one moc'd header gated on it. That guard now
+  also holds under `Q_MOC_RUN` (Darwin only; Linux pyqt6 stays cached).
+- angr (reversing): nixpkgs' suite is consistent again at 10.0.4 (claripy
+  and ailment merged into angr) and works with pycparser 3.00, so
+  pkgs/angr.nix and its 9.2.154 downgrade are gone. The downgrade had
+  started building 9.2.154 with 10.0.4's Rust `cargoDeps` (no Cargo.lock).
+- Cutter: Qt 6.12's uic rejects `AddressableItemList<>` as a .ui class
+  name. Patched as in upstream's open rizinorg/cutter#3670 (an
+  `AddressableItemListView` alias).
+- semgrep 1.180 imports `mcp.server.fastmcp`, gone in the pin's mcp 2.x:
+  built against nixpkgs' `mcp_1`.
+- amaranth 0.5.10 and glasgow (hardware) pin `pyvcd<0.5`; the pin has
+  0.5.0, whose breaking changes neither uses (amaranth-lang/amaranth#1686).
+  The pin is relaxed.
+- threat9-test-bed (routersploit's test dependency, network): setuptools-scm
+  10.2 rejects its absolute `write_to`; made relative.
+- jSS7 (telecom, telecom_5g_*, telecom_ltesniffer): Maven 3.10 refuses the
+  WildFly extension's duplicate `wildfly-controller` declaration (3.9 only
+  warned). The duplicate is dropped and `mvnHash` regenerated (identical
+  on x86_64-linux and aarch64-darwin).
+
 ### Security fixes and version refresh (2026-10-23)
 
 Security:
@@ -68,7 +102,7 @@ Changed (latest upstream releases or branch heads):
   1.1.0, KC908 0.5.11-72, Harogic 0.55.88, sslyze 6.3.1, and the other ~150
   commit-pinned packages, already at their upstream heads.
 - Kept on purpose: mmt-dpi (newer commits drop `update_http2_data`, which
-  5Greplay still calls), pyrit, crypto1_bs, angr 9.2.154, certsync's Certipy
+  5Greplay still calls), pyrit, crypto1_bs, certsync's Certipy
   4.8.2, OAI's asn1c and SIMDE commits, GNU Radio 4's dependency set.
 
 Fixed:

@@ -37,7 +37,24 @@
         prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
           pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
             (pyfinal: pyprev: {
-              pyqt6 = pyprev.pyqt6.override { withPdf = false; };
+              # On Darwin, qtbase 6.12's include/QtCore/*.h are one-line
+              # `#include_next <QtCore/...>` forwarders into QtCore.framework.
+              # moc treats every header as include-once and does not implement
+              # include_next, so with qmake's default include dirs (<qtbase>/include
+              # before -F<qtbase>/lib) the forwarder only finds itself and
+              # QT_VERSION stays undefined. qpycore_qrangemodel.h is the one moc'd
+              # header gated on QT_VERSION, so moc emitted nothing for it and
+              # QtCore.abi3.so failed to load ("symbol not found in flat namespace
+              # __ZN13QPyTableRange16staticMetaObjectE"). Also take the guard when
+              # moc runs; the generated code is compiled against the real 6.12
+              # headers.
+              pyqt6 = (pyprev.pyqt6.override { withPdf = false; }).overridePythonAttrs (o: {
+                postPatch = (o.postPatch or "") + ''
+                  substituteInPlace qpy/QtCore/qpycore_qrangemodel.h \
+                    --replace-fail '#if QT_VERSION >= 0x060a00' \
+                      '#if QT_VERSION >= 0x060a00 || defined(Q_MOC_RUN)'
+                '';
+              });
               # crccheck is pure Python, but nixpkgs marks its meta.platforms
               # linux-only. That wrongly drops `cantools` (and the automotive
               # env's DBC tooling) on macOS, even though CAN over USB adapters
@@ -402,6 +419,57 @@
         ];
       };
 
+      # nixpkgs packages that fail to build on this pin on every platform (none
+      # of them is on cache.nixos.org): a dependency moved past the version its
+      # consumer pins, or a Qt tool got stricter. Fixed in the package set so
+      # each stays one derivation for every tool that pulls it in.
+      pinBreakageOverlay = final: prev: {
+        # Qt 6.12's uic rejects template syntax in a .ui class name ("Invalid
+        # class name: AddressableItemList<>"). Same fix as upstream's open
+        # rizinorg/cutter#3670: an alias names the default instantiation and
+        # the .ui files use it.
+        cutter = prev.cutter.overrideAttrs (old: {
+          postPatch = (old.postPatch or "") + ''
+            substituteInPlace $(grep -rl 'AddressableItemList&lt;&gt;' src) \
+              --replace-fail 'AddressableItemList&lt;&gt;' 'AddressableItemListView'
+            substituteInPlace src/widgets/AddressableItemList.h \
+              --replace-fail '#endif // ADDRESSABLE_ITEM_LIST_H' \
+                'using AddressableItemListView = AddressableItemList<CutterTreeView>;
+            #endif // ADDRESSABLE_ITEM_LIST_H'
+          '';
+        });
+        # The pin moved pyvcd to 0.5, past the `<0.5` that amaranth 0.5.10 and
+        # glasgow declare (hardware env). 0.5's breaking changes are Python
+        # >= 3.10 and Timescale.magnitude becoming a plain int; neither project
+        # touches timescales, which Amaranth's maintainers confirmed upstream
+        # (amaranth-lang/amaranth#1686).
+        glasgow = prev.glasgow.overridePythonAttrs (old: {
+          pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "pyvcd" ];
+        });
+        pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
+          (pyfinal: pyprev: {
+            amaranth = pyprev.amaranth.overridePythonAttrs (old: {
+              pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "pyvcd" ];
+            });
+            # semgrep 1.180 imports mcp.server.fastmcp at CLI load, which mcp
+            # 2.x renamed (now the pin's default). Build it against nixpkgs'
+            # mcp 1.x, as home-assistant and others on this pin do.
+            semgrep = pyprev.semgrep.override { mcp = pyfinal.mcp_1; };
+            # setuptools-scm 10.2 rejects an absolute `write_to` ("Version file
+            # path must be relative"), which threat9-test-bed's setup.py builds
+            # from its own directory. It is relative to `root` (that same
+            # directory) anyway. routersploit (network) checks against it.
+            threat9-test-bed = pyprev.threat9-test-bed.overridePythonAttrs (old: {
+              postPatch = (old.postPatch or "") + ''
+                substituteInPlace setup.py --replace-fail \
+                  'str(HERE / "threat9_test_bed" / "_version.py")' \
+                  '"threat9_test_bed/_version.py"'
+              '';
+            });
+          })
+        ];
+      };
+
       # Allow unfree so the few tools that need it (and any vendor bits we add
       # later) resolve.
       pkgsFor = system: import nixpkgs {
@@ -413,7 +481,7 @@
           # android buildEnv fails even though a shallow devShell eval passes.
           android_sdk.accept_license = true;
         };
-        overlays = [ pyqtNoWebengineOverlay missingDepsOverlay flakyPyTestsOverlay ];
+        overlays = [ pyqtNoWebengineOverlay missingDepsOverlay flakyPyTestsOverlay pinBreakageOverlay ];
       };
 
       lib = nixpkgs.lib;
@@ -611,7 +679,7 @@
               allowUnfree = true;
               android_sdk.accept_license = true;
             };
-            overlays = [ self.overlays.default pyqtNoWebengineOverlay missingDepsOverlay flakyPyTestsOverlay ];
+            overlays = [ self.overlays.default pyqtNoWebengineOverlay missingDepsOverlay flakyPyTestsOverlay pinBreakageOverlay ];
           };
           # The reusable overlay cannot carry the separate nixpkgs-py310 input.
           # Merge customFor here so user-facing names such as `mirage` and

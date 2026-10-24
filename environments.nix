@@ -896,13 +896,8 @@
     # The Windows debuggers x64dbg and OllyDBG are shipped Wine-wrapped; pwndbg
     # comes from its official self-contained .deb.
     #
-    # angr: this nixpkgs pin ships angr 9.2.193 alongside pycparser 3.00, a
-    # rewrite that removed the PLY parser angr's C-type engine drives, so a
-    # stock `import angr` fails. pkgs/angr.nix builds angr against a python whose
-    # pycparser is pinned back to 2.x, scoped via packageOverrides so only angr's
-    # own closure (cffi and dependents) rebuilds - the global python set and the
-    # meson/python native stack keep their binary-cache hits. angr's runtime
-    # PYTHONPATH (requiredPythonModules) then carries pycparser 2.22 only.
+    # angr is nixpkgs' 10.0.4 suite, which works with the pin's pycparser 3.00
+    # (the earlier 9.2.x line did not, hence the former pkgs/angr.nix).
     missing = [ ];
   };
 

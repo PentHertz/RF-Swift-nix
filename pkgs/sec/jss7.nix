@@ -27,10 +27,26 @@ maven.buildMavenPackage {
     hash = "sha256-VjaiF0XaVblwrC6Rrc21pLBd3nmbsvjlZcYRUft1NVw=";
   };
 
+  # The WildFly extension declares wildfly-controller twice, identically.
+  # Maven 3.9 only warned; 3.10 (this pin) refuses to read the project. Drop
+  # the first copy.
+  postPatch = ''
+    substituteInPlace service/wildfly/extension/pom.xml --replace-fail \
+      '<dependency>
+                <groupId>org.wildfly.core</groupId>
+                <artifactId>wildfly-controller</artifactId>
+                <version>''${version.wildfly.core}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- WildFly Core modules  -->' \
+      '<!-- WildFly Core modules  -->'
+  '';
+
   mvnJdk = jdk11;
   doCheck = false; # -DskipTests, matching the images.
 
-  mvnHash = "sha256-D2RG8bHSSRFBJmUW2Ax39B8OU7GcO2sT7obavXmkcxs=";
+  mvnHash = "sha256-O10BnDSOxFe8Ql76DFhngLq3cmnHZ+eDSbwEchXQ0DY=";
 
   # jss7 is a library set, not an app: collect every module's built jar into a
   # shared java directory so downstream tooling can put them on the classpath.
