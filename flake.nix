@@ -454,7 +454,27 @@
             # semgrep 1.180 imports mcp.server.fastmcp at CLI load, which mcp
             # 2.x renamed (now the pin's default). Build it against nixpkgs'
             # mcp 1.x, as home-assistant and others on this pin do.
-            semgrep = pyprev.semgrep.override { mcp = pyfinal.mcp_1; };
+            #
+            # semgrep-core is the prebuilt binary from the wheel. On Linux,
+            # nixpkgs' single patchelf call (interpreter + rpath
+            # `$out/bin/libs:<glibc>/lib`) aborts on 1.180.0's binary
+            # (patchelf.cc shiftFile: `splitIndex == -1`) when it has to grow
+            # .interp and the rpath together. `$ORIGIN/libs` names the same
+            # directory and keeps the new rpath shorter than the binary's
+            # current one, so it is rewritten in place and only .interp grows.
+            # Still one patchelf call: upstream notes that repeated rewrites
+            # corrupt this binary on aarch64.
+            semgrep = pyprev.semgrep.override {
+              mcp = pyfinal.mcp_1;
+              semgrep-core = pyprev.semgrep.passthru.semgrep-core.overrideAttrs (_: {
+                postFixup = lib.optionalString final.stdenv.hostPlatform.isLinux ''
+                  patchelf \
+                    --set-interpreter "$(cat ${final.stdenv.cc}/nix-support/dynamic-linker)" \
+                    --set-rpath '$ORIGIN/libs:${lib.makeLibraryPath [ final.stdenv.cc.libc ]}' \
+                    $out/bin/semgrep-core
+                '';
+              });
+            };
             # setuptools-scm 10.2 rejects an absolute `write_to` ("Version file
             # path must be relative"), which threat9-test-bed's setup.py builds
             # from its own directory. It is relative to `root` (that same

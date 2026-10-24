@@ -31,7 +31,10 @@ Fixed:
   name. Patched as in upstream's open rizinorg/cutter#3670 (an
   `AddressableItemListView` alias).
 - semgrep 1.180 imports `mcp.server.fastmcp`, gone in the pin's mcp 2.x:
-  built against nixpkgs' `mcp_1`.
+  built against nixpkgs' `mcp_1`. On Linux its prebuilt semgrep-core also
+  made patchelf abort (`shiftFile: splitIndex == -1`) when growing .interp
+  and the rpath at once; the rpath is now `$ORIGIN/libs:<glibc>/lib`, which
+  fits in place.
 - amaranth 0.5.10 and glasgow (hardware) pin `pyvcd<0.5`; the pin has
   0.5.0, whose breaking changes neither uses (amaranth-lang/amaranth#1686).
   The pin is relaxed.
